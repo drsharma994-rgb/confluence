@@ -1167,7 +1167,7 @@ audio{display:none}
 .st-card-btn.win-btn{border-color:var(--green);color:var(--green)}
 .st-card-btn.loss-btn{border-color:var(--red);color:var(--red)}
 .st-card-btn.del-btn{border-color:var(--border);color:var(--dim)}
-</style><link rel="manifest" href="blob:https://d2z0o16i8xm8ak.cloudfront.net/81b829b0-5cc9-44fd-bda9-a38f7338adbd"><style id="ai-engine-v9-styles">
+</style><style id="ai-engine-v9-styles">
 /* ── AI Engine v9 Styles ── */
 .us-regime-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.4px}
 .regime-bull{background:#00c89620;color:#00c896;border:1px solid #00c89640}
@@ -2884,24 +2884,35 @@ async function fetchOrderBook(symbol){
 }
 
 async function fetchFundingHistory(symbol){
+  // v13.14 FIX: /v2/funding_history does not exist on Delta (always 404).
+  // The documented source is /v2/history/candles with the FUNDING: symbol
+  // prefix. 4h resolution × 30 days ≈ 180 points, newest-first to preserve
+  // the original consumer contract (fhArr[0] = most recent).
+  // NOTE: unit scale of these values vs ticker funding_rate is calibrated
+  // empirically by FUND CHECK (v13_fund_cal) — do not hardcode ×100 here.
   try{
-    /* Use direct fetch only — avoid proxy for this endpoint */
     const base=BASES[baseIdx%BASES.length];
-    const r=await fetch(base+'/v2/funding_history?symbol='+symbol+'&page_size=90',
-      {signal:AbortSignal.timeout(5000)});
+    const now=Math.floor(Date.now()/1000), start=now-30*86400;
+    const r=await fetch(base+'/v2/history/candles?resolution=4h&symbol=FUNDING:'+symbol+'&start='+start+'&end='+now,
+      {signal:AbortSignal.timeout(6000)});
     if(!r.ok)return[];
     const d=await r.json();
-    return (d?.result||[]).map(r=>+(r.funding_rate||0)*100);
+    const arr=(d?.result||[]).map(x=>+(x.close??x.c??0)).filter(v=>isFinite(v));
+    arr.reverse(); // Delta returns ascending time → newest-first
+    return arr;
   }catch(e){return[];}
 }
 
+let _takerDead=0; // v13.14: /v2/trades appears not to exist publicly — stop after 3 fails
 async function fetchTakerRatio(symbol){
   // Delta Exchange trades endpoint — get last 100 trades, compute buy vs sell
   try{
+    if(_takerDead>=3)return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
     const base=BASES[baseIdx%BASES.length];
     const r=await fetch(base+'/v2/trades?symbol='+symbol+'&limit=100',
       {signal:AbortSignal.timeout(5000)});
-    if(!r.ok)return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
+    if(!r.ok){_takerDead++;return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};}
+    _takerDead=0;
     const d=await r.json();
     const trades=d?.result||[];
     let buyVol=0,sellVol=0;
@@ -26663,11 +26674,16 @@ window.v13_fundCheck=function(){
     if(ratios.length<5){alert('FUND CHECK: not enough data ('+ratios.length+' coins). Try after a full scan.');return;}
     ratios.sort(function(x,y){return x-y;});
     var R=ratios[Math.floor(ratios.length/2)];
+    // v13.14b: nearest-decade classification. A unit mismatch is exactly x100;
+    // market-regime drift (current vs 30d median magnitude) is rarely >x10.
+    var L=Math.log(R)/Math.LN10;
+    var cands=[{cal:1,d:Math.abs(L)},{cal:100,d:Math.abs(L-2)},{cal:0.01,d:Math.abs(L+2)}];
+    cands.sort(function(a2,b2){return a2.d-b2.d;});
     var verdict,cal=1;
-    if(R>=0.2&&R<=5){verdict='\u2705 Ticker and history funding share one scale (median ratio '+R.toFixed(2)+'). Percentile is valid. No change.';}
-    else if(R>30&&R<300){cal=100;verdict='\u26A0 History is ~100\u00d7 smaller than ticker (ratio '+R.toFixed(0)+'). Calibration \u00d7100 applied to history — takes effect next scan.';}
-    else if(R>1/300&&R<1/30){cal=0.01;verdict='\u26A0 History is ~100\u00d7 LARGER than ticker (ratio '+R.toFixed(4)+'). Calibration \u00f7100 applied — takes effect next scan.';}
-    else{verdict='\u2753 Ambiguous ratio '+R.toFixed(3)+' across '+ratios.length+' coins. No calibration applied — please also compare one coin against the Delta website and report back.';}
+    if(cands[0].d>0.85){verdict='\u2753 Ambiguous ratio '+R.toFixed(3)+' across '+ratios.length+' coins (log-distance '+cands[0].d.toFixed(2)+'). No calibration applied — compare one coin against the Delta website and report back.';}
+    else if(cands[0].cal===1){verdict='\u2705 Ticker and history funding share one scale (median ratio '+R.toFixed(2)+'). Percentile is valid. No change.';}
+    else if(cands[0].cal===100){cal=100;verdict='\u26A0 History is ~100\u00d7 smaller than ticker (median ratio '+R.toFixed(1)+'). Calibration \u00d7100 applied to history — takes effect next scan. Funding percentiles are now valid.';}
+    else{cal=0.01;verdict='\u26A0 History is ~100\u00d7 LARGER than ticker (median ratio '+R.toFixed(4)+'). Calibration \u00f7100 applied — takes effect next scan.';}
     if(cal!==1){try{localStorage.setItem('v13_fund_cal',String(cal));}catch(_){}}
     alert('FUND CHECK ('+ratios.length+' coins)\n\n'+verdict);
   }catch(e){alert('FUND CHECK failed: '+e.message);}
