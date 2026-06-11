@@ -1239,7 +1239,7 @@ audio{display:none}
     <div class="hstat"><div class="lbl">Coins Loaded</div><div class="val" id="coinCount" style="color:var(--green)">30</div></div>
     <div class="hstat"><div class="lbl">UTC</div><div class="val" id="clock">--:--:--</div></div>
     <div class="hstat"><div class="lbl">Re-scan</div><div class="val" style="color:var(--accent)" id="countdown">—</div></div>
-    <div class="hstat"><div class="lbl">Feed</div><div class="status"><span class="dot" id="statusDot"></span><span id="statusTxt">⚖️ Basis Alert: H 67181.62%</span></div></div>
+    <div class="hstat"><div class="lbl">Feed</div><div class="status"><span class="dot" id="statusDot"></span><span id="statusTxt">Ready</span></div></div>
     <button class="hbtn sound-btn on" id="soundBtn" onclick="toggleSound()" title="Sound alerts">🔊</button>
     <button class="hbtn" id="darkBtn" onclick="toggleDark()" title="Dark mode">🌙</button>
     <button class="hbtn" id="pushBtn" title="Browser push alerts" style="font-size:10px">🔔 Push</button>
@@ -1294,7 +1294,7 @@ audio{display:none}
 <!-- SESSION BAR -->
 <div class="session-bar">
   <span id="sessionTag" class="session-tag london" title="11:30 PM–1 AM IST · Watch for reversals · Mean-reversion setups" style="color: rgb(245, 158, 11);">NY CLOSE</span>
-  <span id="sessionNote" style="flex:1">NY-London overlap end — watch for reversals. Good for mean-reversion setups.</span>
+  <span id="sessionNote" style="flex:1">NY-London overlap end — watch for reversals. Mean-reversion is a common heuristic here — not validated.</span>
   <span class="sq-dot off" id="sqDot"></span>
   <span id="sqTxt" style="font-size:10px">checking squeeze…</span>
 </div>
@@ -1405,7 +1405,7 @@ audio{display:none}
     <div class="ctl"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fullAlignOnly" style="accent-color:var(--accent)"> 4/4 Align only</label></div>
     <div class="ctl"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="favOnly" style="accent-color:var(--accent)"> Watchlist only</label></div>
     <button class="btn export-btn" onclick="exportCSV()">⬇ CSV</button>
-    <div class="scanline" id="scanline">⚖️ Basis Alert: H 67181.62%</div>
+    <div class="scanline" id="scanline">Initialising…</div>
   </div>
   <div id="coin-panel-wrap" class="open">
     <div class="panel-header">
@@ -2241,7 +2241,7 @@ function fundingMomentum(fhArr){
   return{flip,direction,streak,extreme,recentAvg,olderAvg};
 }
 function oiPriceDivergence(oiChgPct,dir,priceChg){if(oiChgPct==null)return null;if(oiChgPct>3&&priceChg<-0.5)return'OI↑ PRICE↓ → SHORT';if(oiChgPct<-3&&priceChg>0.5)return'OI↓ PRICE↑ → WEAK';if(oiChgPct>3&&priceChg>0.5)return'OI↑ PRICE↑ → CONFIRM';return null;}
-function getSession(){const h=new Date().getUTCHours(),m=new Date().getUTCMinutes(),t=h+m/60;if(t>=23||t<3)return{name:'DEAD ZONE',cls:'dead',weight:0.4,note:'Low volume — avoid chasing. Wait for Asia open 03:00 UTC.'};if(t>=3&&t<8)return{name:'ASIA',cls:'asia',weight:0.7,note:'Asia session — BTC leads, altcoins follow. Trend continuation setups work best.'};if(t>=8&&t<12)return{name:'LONDON',cls:'london',weight:0.85,note:'London open — high volatility, fakeouts common. Wait for candle close before entry.'};if(t>=12&&t<18)return{name:'NY',cls:'ny',weight:1.0,note:'NY session — highest liquidity. Breakout setups most reliable here.'};return{name:'NY CLOSE',cls:'london',weight:0.75,note:'NY-London overlap end — watch for reversals. Good for mean-reversion setups.'};}
+function getSession(){const h=new Date().getUTCHours(),m=new Date().getUTCMinutes(),t=h+m/60;if(t>=23||t<3)return{name:'DEAD ZONE',cls:'dead',weight:0.4,note:'Low volume — avoid chasing. Wait for Asia open 03:00 UTC.'};if(t>=3&&t<8)return{name:'ASIA',cls:'asia',weight:0.7,note:'Asia session — BTC leads, altcoins follow. Continuation bias is a common heuristic — not validated here.'};if(t>=8&&t<12)return{name:'LONDON',cls:'london',weight:0.85,note:'London open — high volatility, fakeouts common. Wait for candle close before entry.'};if(t>=12&&t<18)return{name:'NY',cls:'ny',weight:1.0,note:'NY session — highest liquidity. Breakouts are often favored here — heuristic, not validated.'};return{name:'NY CLOSE',cls:'london',weight:0.75,note:'NY-London overlap end — watch for reversals. Mean-reversion is a common heuristic here — not validated.'};}
 function btcCorrelation(closes,btcCloses){if(!btcCloses||btcCloses.length<20)return null;const n=Math.min(closes.length,btcCloses.length,48);const c1=closes.slice(-n),c2=btcCloses.slice(-n);const r1=c1.map((_,i)=>i>0?(c1[i]-c1[i-1])/c1[i-1]:0).slice(1);const r2=c2.map((_,i)=>i>0?(c2[i]-c2[i-1])/c2[i-1]:0).slice(1);const m1=avg(r1),m2=avg(r2);let cov=0,s1=0,s2=0;r1.forEach((_,i)=>{cov+=(r1[i]-m1)*(r2[i]-m2);s1+=(r1[i]-m1)**2;s2+=(r2[i]-m2)**2;});const corr=Math.sqrt(s1*s2)>0?cov/Math.sqrt(s1*s2):0;return Math.round(corr*100);}
 function calcPremium(closes,markPrice){const avg7d=avg(closes.slice(-168));if(!avg7d)return null;return(markPrice-avg7d)/avg7d*100;}
 function volRegime(atrHistory){if(!atrHistory||atrHistory.length<10)return{regime:'normal',pct:50};const vals=atrHistory.filter(x=>x!=null&&isFinite(x));if(vals.length<5)return{regime:'normal',pct:50};const cur=vals[vals.length-1];const sorted=[...vals].sort((a,b)=>a-b);const rank=sorted.filter(x=>x<=cur).length;const pct=Math.round(rank/sorted.length*100);const regime=pct>=75?'high':pct<=25?'low':'normal';return{regime,pct};}
@@ -2532,7 +2532,11 @@ function analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,fng,takerData){
   // v13.13 FIX: fetchFundingHistory already returns numbers scaled ×100 (percent).
   // The old map multiplied by 100 AGAIN → fhArr was 100× too large vs fRate,
   // which made fundingMomentum.extreme (>0.1%) fire on virtually any funding.
-  const fhArr=Array.isArray(fhist)?fhist.map(x=>typeof x==='number'?x:+(x.funding_rate??0)*100):[];
+  let fhArr=Array.isArray(fhist)?fhist.map(x=>typeof x==='number'?x:+(x.funding_rate??0)*100):[];
+  // v13.14: apply unit calibration discovered by the FUND CHECK self-test (🐞 panel).
+  // Guarantees ticker funding and history funding share one scale so the percentile is valid.
+  const _fcal=+(function(){try{return localStorage.getItem('v13_fund_cal')||1;}catch(_){return 1;}})();
+  if(_fcal!==1&&isFinite(_fcal)&&_fcal>0) fhArr=fhArr.map(x=>x*_fcal);
   const fBias=fundingHistoryBias(fhArr.slice(0,8)); // keep original 8-sample bias semantics
   const fundFlip=fhArr.length>=2&&Math.sign(fhArr[0])!==Math.sign(fhArr[1]);
   const fMomentum=fundingMomentum(fhArr);
@@ -3852,6 +3856,9 @@ async function scanPerpBasis(){
       if(!spotPrice||!a.price)continue;
       const perpPrice=a.price;
       const basisPct=(perpPrice-spotPrice)/spotPrice*100;
+      // v13.14 guard: |basis| > 5% means the spot API matched a DIFFERENT asset
+      // (short symbols like 'H' collide) — not a real basis. Skip, never alert.
+      if(Math.abs(basisPct)>5){ _basisState[sym].lastBasis=0; continue; }
       const prevBasis=_basisState[sym].lastBasis||0;
       _basisState[sym].lastBasis=basisPct;
       // Extreme basis: > 0.5% or < -0.5%
@@ -6645,7 +6652,7 @@ function renderCoinDetail(a){
         <div style="background:${_vBg};border:1px solid ${_vColor}55;border-radius:8px;padding:7px 10px;margin-bottom:9px;font-family:var(--mono);font-size:10px;font-weight:800;color:${_vColor};line-height:1.5">${_verdict}</div>
         <!-- Confidence bar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-family:var(--mono);font-size:9px;color:#94a3b8;letter-spacing:1px">CONFIDENCE</span>
+          <span style="font-family:var(--mono);font-size:9px;color:#94a3b8;letter-spacing:1px">CONFIDENCE (heuristic)</span>
           <span style="font-weight:900;font-size:14px;color:${confColor}">${entry.confidence}% ${entry.confLabel}</span>
         </div>
         <div style="background:#1e293b;border-radius:4px;height:5px;margin-bottom:10px;overflow:hidden">
@@ -6657,11 +6664,12 @@ function renderCoinDetail(a){
           <div style="font-family:var(--mono);font-size:14px;font-weight:900;color:#ffffff;letter-spacing:.5px">${fp2(entry.entryZoneLow)} – ${fp2(entry.entryZoneHigh)}</div>
           <div style="font-family:var(--mono);font-size:10px;color:#94a3b8;margin-top:3px">Ideal: <b style="color:#fbbf24">${fp2(entry.entryPrice)}</b> · ${entry.entryType}</div>
         </div>
-        <!-- Stop -->
+        <!-- Stop: plan stop is CANONICAL (one source of truth); engine alt shown only if divergent -->
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <div style="flex:1;background:#ef444411;border:1px solid #ef444444;border-radius:7px;padding:6px 8px;text-align:center">
-            <div style="font-family:var(--mono);font-size:8px;color:#ef4444;letter-spacing:1px">STOP LOSS</div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#ef4444">${fp2(entry.stopLoss)}</div>
+            <div style="font-family:var(--mono);font-size:8px;color:#ef4444;letter-spacing:1px">${(a.plan&&(a.plan.stop||a.plan.sl))?'STOP (PLAN)':'STOP LOSS'}</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#ef4444">${fp2((a.plan&&(a.plan.stop||a.plan.sl))||entry.stopLoss)}</div>
+            ${(function(){var ps=a.plan&&(a.plan.stop||a.plan.sl);if(ps&&entry.stopLoss&&Math.abs(entry.stopLoss-ps)/ps>0.003)return '<div style="font-family:var(--mono);font-size:8px;color:#94a3b8;margin-top:2px">engine alt: '+fp2(entry.stopLoss)+'</div>';return '';})()}
           </div>
           <div style="flex:1;background:#22c55e11;border:1px solid #22c55e44;border-radius:7px;padding:6px 8px;text-align:center">
             <div style="font-family:var(--mono);font-size:8px;color:#22c55e;letter-spacing:1px">TOP SIGNAL</div>
@@ -21957,11 +21965,11 @@ function _stRenderResults(con, results){
   html+=`<div style="background:var(--accent-bg);border:1px solid var(--accent);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-family:var(--mono)">
     <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px">🌍 World's Best Strategies Active</div>
     <div style="font-size:9.5px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:2px">
-      <span>📈 Adaptive Trend — Sharpe 2.41, 40% annual</span>
-      <span>💰 Funding Arb — Sharpe 5–10, ~16% APY</span>
+      <span>📈 Adaptive Trend — 2025 paper backtest claim; NOT validated here</span>
+      <span>💰 Funding Arb — paper claim; carry returns turned NEGATIVE in 2025</span>
       <span>🚨 Liquidation Cascade — OI+Funding heatmap</span>
-      <span>📊 10-Day Breakout — Beats B&H</span>
-      <span>⚡ Dynamic Grid — 60–70% IRR on ETH</span>
+      <span>📊 10-Day Breakout — historical backtest only; edge decays</span>
+      <span>⚡ Dynamic Grid — cherry-picked period claim; unvalidated</span>
       <span>🥇 Gold XAUUSD — Live overlay</span>
     </div>
   </div>`;
@@ -26515,9 +26523,10 @@ window.v13_entryGrade=function(a){
   return {grade:g, pts:pts, parts:parts};
 };
 
-function ds_snapshot(a){
+function ds_snapshot(a, gate){
   return {
     id:(a.coin&&a.coin.symbol)+'-'+a.dir+'-'+Math.floor(Date.now()/3600000),
+    gate:(gate===0?0:1),
     sym:(a.coin&&a.coin.symbol)||'?', dir:a.dir, ts:Date.now(), entry:a.price,
     atr:+a.atr||0,
     fa:a._familyAgreement||0,
@@ -26541,14 +26550,37 @@ function ds_snapshot(a){
 function ds_recordFromScan(){
   if(typeof S==='undefined' || !S.universe) return;
   var ds=ds_load(); var ids={}; ds.forEach(function(r){ids[r.id]=1;});
-  var n=0;
+  // v13.14 episode dedupe: a setup that persists for hours is ONE sample, not many.
+  // Skip if an unlabeled record for same sym+dir exists within the last 12h.
+  function inEpisode(sym,dir){
+    var cut=Date.now()-12*3600*1000;
+    for(var i=ds.length-1;i>=0;i--){
+      var r=ds[i];
+      if(r.ts<cut) break;
+      if(r.sym===sym && r.dir===dir && (r.label===null||r.label===undefined)) return true;
+    }
+    return false;
+  }
+  var n=0, rejects=[];
   S.universe.forEach(function(a){
-    var valid = (a._familyAgreement>=3) && a.plan && isFinite(a.plan.rr) && a.plan.rr>=2 && a.atr>0 && a.price>0;
-    if(!valid) return;
-    var r=ds_snapshot(a);
+    var sane = a && a.dir && a.atr>0 && a.price>0 && a.coin && a.coin.symbol;
+    if(!sane) return;
+    var valid = (a._familyAgreement>=3) && a.plan && isFinite(a.plan.rr) && a.plan.rr>=2;
+    if(!valid){ rejects.push(a); return; }
+    if(inEpisode(a.coin.symbol, a.dir)) return;
+    var r=ds_snapshot(a, 1);
     if(ids[r.id]) return;
     ds.push(r); ids[r.id]=1; n++;
   });
+  // v13.14 control group: one RANDOM gate-failing setup per scan, so training can
+  // learn whether the FA>=3 & RR>=2 gate itself adds value (counterfactual data).
+  if(rejects.length){
+    var c=rejects[Math.floor(Math.random()*rejects.length)];
+    if(!inEpisode(c.coin.symbol, c.dir)){
+      var cr=ds_snapshot(c, 0);
+      if(!ids[cr.id]){ ds.push(cr); ids[cr.id]=1; n++; }
+    }
+  }
   if(n){ ds_save(ds); bx_strip(); }
 }
 
@@ -26607,7 +26639,7 @@ async function ds_labelPending(maxN){
 
 function ds_csv(){
   var ds=ds_load();
-  var cols=['id','sym','dir','ts','entry','atr','fa','rr','str','rank','sq','sqDeep','cusum','fpctl','fext','oi','adx','rsi','bxAgree','eg','label','retH'];
+  var cols=['id','gate','sym','dir','ts','entry','atr','fa','rr','str','rank','sq','sqDeep','cusum','fpctl','fext','oi','adx','rsi','bxAgree','eg','label','retH'];
   var out=cols.join(',')+'\n';
   ds.forEach(function(r){
     out+=cols.map(function(c){var v=r[c];return (v===null||v===undefined)?'':String(v).replace(/,/g,';');}).join(',')+'\n';
@@ -26616,6 +26648,30 @@ function ds_csv(){
 }
 
 /* globals for buttons */
+window.v13_fundCheck=function(){
+  try{
+    if(typeof S==='undefined'||!S.universe||!S.universe.length){alert('Run a scan first.');return;}
+    var ratios=[];
+    S.universe.forEach(function(a){
+      var f=a.funding; if(!f||!f.history||f.history.length<10)return;
+      var cur=Math.abs(+f.current||0); if(!(cur>0))return;
+      var mags=f.history.map(function(x){return Math.abs(+x||0);}).filter(function(x){return x>0;}).sort(function(x,y){return x-y;});
+      if(mags.length<6)return;
+      var med=mags[Math.floor(mags.length/2)];
+      if(med>0)ratios.push(cur/med);
+    });
+    if(ratios.length<5){alert('FUND CHECK: not enough data ('+ratios.length+' coins). Try after a full scan.');return;}
+    ratios.sort(function(x,y){return x-y;});
+    var R=ratios[Math.floor(ratios.length/2)];
+    var verdict,cal=1;
+    if(R>=0.2&&R<=5){verdict='\u2705 Ticker and history funding share one scale (median ratio '+R.toFixed(2)+'). Percentile is valid. No change.';}
+    else if(R>30&&R<300){cal=100;verdict='\u26A0 History is ~100\u00d7 smaller than ticker (ratio '+R.toFixed(0)+'). Calibration \u00d7100 applied to history — takes effect next scan.';}
+    else if(R>1/300&&R<1/30){cal=0.01;verdict='\u26A0 History is ~100\u00d7 LARGER than ticker (ratio '+R.toFixed(4)+'). Calibration \u00f7100 applied — takes effect next scan.';}
+    else{verdict='\u2753 Ambiguous ratio '+R.toFixed(3)+' across '+ratios.length+' coins. No calibration applied — please also compare one coin against the Delta website and report back.';}
+    if(cal!==1){try{localStorage.setItem('v13_fund_cal',String(cal));}catch(_){}}
+    alert('FUND CHECK ('+ratios.length+' coins)\n\n'+verdict);
+  }catch(e){alert('FUND CHECK failed: '+e.message);}
+};
 window.v13_dsLabelNow=function(){
   ds_labelPending(30).then(function(n){
     try{var el=document.getElementById('bx-strip');if(el){bx_strip();}}catch(_){}
@@ -26767,6 +26823,7 @@ function togglePanel(){
     head.innerHTML='<b style="color:#e2e8f0;font-size:12px">\uD83D\uDC1E Error Capture</b>';
     var btns=document.createElement('div');
     function mkBtn(id,label,bg,fn){var b=document.createElement('button');b.id=id;b.textContent=label;b.style.cssText='background:'+bg+';color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;margin-left:5px';b.onclick=fn;return b;}
+    btns.appendChild(mkBtn('_dbgFund','FUND CHECK','#7c2d12',function(){ if(window.v13_fundCheck)window.v13_fundCheck(); }));
     btns.appendChild(mkBtn('_dbgTest','TEST NET','#15803d',function(){
       var b=document.getElementById('_dbgTest');b.textContent='...';
       var results={};
@@ -26799,6 +26856,21 @@ function togglePanel(){
 }
 function init(){
   if(badge)return;
+  /* v13.14 storage-origin guard: content:// (and other non-file/https schemes) can
+     give an unstable origin — the trade dataset may NOT persist between sessions. */
+  try{
+    if(!/^(file:|https?:)$/.test(location.protocol)){
+      var warn=document.createElement('div');
+      warn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;color:#fecaca;font-family:monospace;font-size:11px;padding:8px 34px 8px 10px;line-height:1.5';
+      warn.innerHTML='\u26A0 Opened via <b>'+location.protocol+'//</b> \u2014 browser storage may NOT persist, risking your ML dataset. Open via <b>file:///sdcard/Download/\u2026</b> typed in Chrome\u2019s address bar and bookmark it. Tap BAK now as insurance.';
+      var x=document.createElement('span');
+      x.textContent='\u2715';
+      x.style.cssText='position:absolute;right:10px;top:7px;font-weight:700;cursor:pointer';
+      x.onclick=function(){warn.remove();};
+      warn.appendChild(x);
+      document.body.appendChild(warn);
+    }
+  }catch(_){}
   badge=document.createElement('div');
   badge.id='_dbgBadge';
   badge.style.cssText='position:fixed;bottom:74px;left:8px;z-index:99998;background:#78350f;color:#fff;font-family:monospace;font-size:10px;font-weight:700;padding:4px 8px;border-radius:12px;opacity:.85;cursor:pointer;box-shadow:0 2px 6px #0008';
