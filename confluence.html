@@ -12636,6 +12636,24 @@ function renderGoldTab() {
       <div style="display:flex;gap:4px;flex-wrap:wrap;">${_goldLayerHtml}</div>
     </div>`;
 
+  /* ── v13.14b HONEST GATE (ported from perp Entry Engine) ── */
+  const _gvR  = (s.rr!=null&&isFinite(s.rr)&&s.rr>0)?s.rr:null;
+  const _gvP  = (_goldAIBayes!=null&&isFinite(_goldAIBayes))?Math.max(0,Math.min(1,_goldAIBayes/100)):null;
+  const _gvEV = (_gvP!=null&&_gvR!=null)?(_gvP*_gvR-(1-_gvP)):null;
+  const _gvReasons=[];
+  if(_gvP!=null&&_gvP<0.45)_gvReasons.push('Win Prob '+Math.round(_gvP*100)+'% — below the 45% floor');
+  if(typeof regimeNoTrade!=='undefined'&&regimeNoTrade)_gvReasons.push('Regime gate: ranging market — engine itself says suppress');
+  if(v5&&v5.volRegime&&v5.volRegime.strategyType==='avoid')_gvReasons.push('Extreme volatility regime (C) — engine itself says avoid');
+  if(_gvR!=null&&_gvR<2)_gvReasons.push('R:R '+_gvR.toFixed(2)+':1 to T1 — below the app standard of 2.0');
+  if(_gvEV!=null&&_gvEV<0)_gvReasons.push('Negative expectancy: '+_gvEV.toFixed(2)+'R per trade at stated win prob');
+  const _gvStand=_gvReasons.length>0;
+  const _gvBanner=_gvStand
+    ? `<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:#ef444418;border:1.5px solid #ef4444;color:#ef4444;font-family:var(--mono);font-size:12.5px;font-weight:800;">⛔ STAND ASIDE — do not take this trade<div style="font-weight:400;font-size:10.5px;margin-top:5px;line-height:1.7;color:#f87171;">${_gvReasons.map(r=>'• '+r).join('<br>')}</div></div>`
+    : `<div style="margin-bottom:10px;padding:8px 10px;border-radius:8px;background:#22c55e15;border:1px solid #22c55e;color:#22c55e;font-family:var(--mono);font-size:12px;font-weight:800;">✅ GATES PASSED — win prob, regime and R:R all clear</div>`;
+  const _gvEvLine = (_gvEV!=null)
+    ? `<div class="plan-row"><span class="gold-label">Expected Value</span><span style="color:${_gvEV>=0.15?'#22c55e':_gvEV>=0?'#f59e0b':'#ef4444'};font-weight:800;">${_gvEV>=0?'+':''}${_gvEV.toFixed(2)}R / trade <span style="color:#6b7280;font-size:10px;font-weight:400;">(p×R−(1−p) · p=${Math.round(_gvP*100)}% · R=${_gvR.toFixed(2)} to T1, conservative)</span></span></div>`
+    : `<div class="plan-row"><span class="gold-label">Expected Value</span><span style="color:#6b7280;">n/a — win prob or R:R unavailable</span></div>`;
+
   el.innerHTML = `
   <!-- INSTITUTIONAL WIDGETS v12 -->
   <div id="kz-gold-timer" style="margin-bottom:8px"></div>
@@ -12671,7 +12689,7 @@ function renderGoldTab() {
 
   <!-- HEADER -->
   <div class="gold-card">
-    <div class="gold-header">🥇 GOLD SWING v5 &nbsp;<span style="font-size:13px;color:var(--muted);font-weight:400;font-family:var(--sans);">Star Trader · CFD</span></div>
+    <div class="gold-header">🥇 GOLD SWING v5 &nbsp;<span style="font-size:13px;color:var(--muted);font-weight:400;font-family:var(--sans);">Star Trader · CFD</span> <span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:5px;background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b40;font-weight:700;vertical-align:middle;">ADVISORY · UNVALIDATED</span></div>
     <div style="margin-top:8px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
       <div class="gold-price">${goldFmt(s.price)}</div>
       <div style="font-size:16px;font-weight:600;color:${priceChgColor};">${priceChg>=0?'+':''}${priceChg.toFixed(2)}% 24h</div>
@@ -12757,13 +12775,16 @@ function renderGoldTab() {
   </div>
 
   <!-- TRADE PLAN -->
-  <div class="gold-card">
-    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;">🎯 TRADE PLAN — ${dirLabel} ENTRY</div>
+  <div class="gold-card" style="${_gvStand?'border-color:#ef4444;':''}">
+    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;">🎯 TRADE PLAN — ${dirLabel} ENTRY${_gvStand?' <span style=\"font-family:var(--mono);font-size:10px;color:#ef4444;font-weight:800;\">· REFERENCE ONLY — DO NOT CHASE</span>':''}</div>
+    ${_gvBanner}
+    <div style="${_gvStand?'opacity:.45;':''}">
     <div class="plan-row"><span class="gold-label">Entry Zone</span><span style="color:#f59e0b;font-weight:700;">$${goldFmt(s.entry)} (Market)</span></div>
     <div class="plan-row"><span class="gold-label">Stop Loss</span><span style="color:#ef4444;font-weight:700;">$${goldFmt(s.stop)} <span style="color:#6b7280;font-size:11px;">(1.5× ATR = $${s.atr4})</span></span></div>
     <div class="plan-row"><span class="gold-label">Target 1 (50% close)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t1)} <span style="color:#6b7280;font-size:11px;">(R:R ${s.rr.toFixed(1)}:1)</span></span></div>
     <div class="plan-row"><span class="gold-label">Target 2 (30% close)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t2)} <span style="color:#6b7280;font-size:11px;">(+3.5× ATR)</span></span></div>
-    <div class="plan-row"><span class="gold-label">Target 3 (20% let run)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t3)} <span style="color:#6b7280;font-size:11px;">(+5× ATR)</span></span></div>
+    <div class="plan-row"><span class="gold-label">Target 3 (20% let run)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t3)} <span style="color:#6b7280;font-size:11px;">(+5× ATR — note: 4H-close exit rule will usually fire first)</span></span></div>
+    ${_gvEvLine}
     <div style="margin-top:12px;font-size:12px;color:#6b7280;padding:8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;line-height:1.8;">
       <strong style="color:var(--muted)">Exit Rules:</strong><br>
       • Move stop to break-even after T1 hit<br>
@@ -12774,6 +12795,7 @@ function renderGoldTab() {
     </div>
     ${fibHtml}
     ${srHtml}
+    </div>
   </div>
 
   <!-- INDICATORS GRID -->
@@ -13611,6 +13633,10 @@ function renderCOTWidget(containerId) {
   if (!el) return;
 
   const { value, date, prevWeek, extremeLong, extremeShort } = COT_DATA;
+  /* v13.14b staleness guard: COT is manually updated — if >35 days old it is
+     display-only misinformation. Grey it out and replace the read. */
+  let _cotAge=9999; try{ const _d=new Date(date); if(isFinite(_d)) _cotAge=Math.round((Date.now()-_d.getTime())/86400000);}catch(_){ }
+  const _cotStale=_cotAge>35;
   const range = extremeLong - extremeShort;
   const pos = Math.max(0, Math.min(1, (value - extremeShort) / range));
   const needlePct = pos * 100;
@@ -13623,10 +13649,10 @@ function renderCOTWidget(containerId) {
                          value > extremeLong  ? '🔴 CROWDED — Fade rallies, reduce longs' :
                          value > 180000       ? '⚠️ Elevated — Follow trend with caution' : '→ Normal range — Follow trend';
 
-  el.innerHTML = `<div class="cot-widget">
+  el.innerHTML = `<div class="cot-widget" style="${_cotStale?'opacity:.55;':''}">
     <div class="fund-title" style="margin-bottom:8px">
-      📋 COT REPORT — Gold Managed Money Net Longs
-      <span style="font-size:10px;color:var(--muted)">Updated ${date}</span>
+      📋 COT REPORT — Gold Managed Money Net Longs ${_cotStale?'<span style="font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:4px;background:#ef444422;color:#ef4444;border:1px solid #ef4444;font-weight:800;">STALE '+_cotAge+'d</span>':''}
+      <span style="font-size:10px;color:${_cotStale?'#ef4444':'var(--muted)'}">Updated ${date}</span>
     </div>
     <div class="cot-gauge-wrap">
       <div style="min-width:60px;text-align:right">
@@ -13640,7 +13666,7 @@ function renderCOTWidget(containerId) {
         <div class="cot-labels"><span>80K (Buy)</span><span>165K (Mid)</span><span>250K (Sell)</span></div>
       </div>
     </div>
-    <div style="margin-top:10px;padding:8px 12px;border-radius:8px;background:${sigColor}15;border:1px solid ${sigColor}33;font-size:12px;font-weight:600;color:${sigColor};text-align:center">${interpretation}</div>
+    <div style="margin-top:10px;padding:8px 12px;border-radius:8px;background:${_cotStale?'#ef4444':sigColor}15;border:1px solid ${_cotStale?'#ef4444':sigColor}33;font-size:12px;font-weight:600;color:${_cotStale?'#ef4444':sigColor};text-align:center">${_cotStale?('🕰 STALE — last CFTC update '+_cotAge+' days ago. Display only; ignore this read until refreshed.'):interpretation}</div>
     <div class="cot-values">
       <div class="cot-val-item"><div style="font-size:14px;font-weight:700;color:var(--ink)">${(value/1000).toFixed(0)}K</div><div style="font-size:10px;color:var(--muted)">Net Long</div></div>
       <div class="cot-val-item"><div style="font-size:14px;font-weight:700;color:${chgColor}">${chgStr}</div><div style="font-size:10px;color:var(--muted)">Week Change</div></div>
