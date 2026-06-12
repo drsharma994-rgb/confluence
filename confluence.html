@@ -2896,7 +2896,8 @@ let _cgDead=false; // CoinGecko geo-blocked/rate-limited — disable after first
 async function fetchSpotPrice(base){
   if(_cgDead)return null;
   try{
-    const id=({'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'}[base])||base.toLowerCase();
+    const _cgMap={'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'};
+    const id=_cgMap[base]; if(!id)return null; // skip unknown coins — no CoinGecko lookup
     const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd',{signal:AbortSignal.timeout(4000)});
     if(!r.ok){_cgDead=true;return null;}
     const d=await r.json();
@@ -26368,7 +26369,7 @@ async function bx_fetch(base){
 
 /* annotate BTC, ETH + top 8 ranked coins after each scan */
 async function bx_annotateTop(){
-  if(typeof S==='undefined' || !S.universe || !S.universe.length || BX.dead>=2) return;
+  if(typeof S==='undefined' || !S.universe || !S.universe.length || BX.dead>=1) return;
   var picks = [];
   // BTC/ETH first — they exist on Binance, so one success proves the layer is reachable
   S.universe.forEach(function(a){
@@ -26383,7 +26384,7 @@ async function bx_annotateTop(){
     var base = (a.coin && (a.coin.base || a.coin.symbol)) || '';
     var bx = await bx_fetch(base);
     if(bx){ a._bx = bx; touched=true; }
-    if(BX.dead>=2) break;
+    if(BX.dead>=1) break;
   }
   if(touched){
     try{
@@ -26657,11 +26658,12 @@ window.addEventListener('unhandledrejection',function(e){
 var _f=window.fetch.bind(window);
 window.fetch=function(u,o){
   var url=typeof u==='string'?u:(u&&u.url)||'?';
+  var _isLocal=/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(String(url));
   return _f.apply(this,arguments).then(function(r){
-    if(r&&!r.ok&&r.status>=400)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
+    if(r&&!r.ok&&r.status>=400&&!_isLocal)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
     return r;
   }).catch(function(err){
-    add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
+    if(!_isLocal)add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
     throw err;
   });
 };
