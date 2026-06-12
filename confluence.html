@@ -26339,14 +26339,13 @@ async function bx_fetch(base){
   try{
     var pr = await Promise.all([
       fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'&interval=1h&limit=25',{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+      fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
     ]);
-    var kl=pr[0], pi=pr[1], sp=pr[2];
+    var kl=pr[0], pi=pr[1];
     if(!kl || !Array.isArray(kl) || kl.length < 10){
       BX.cache[sym] = {ts:Date.now(), ok:false}; // symbol not on Binance — cache the miss
-      // all three endpoints null before ANY session success → likely geo-block, trip breaker
-      if(!kl && !pi && !sp && !BX.everOk) BX.dead++;
+      // both endpoints null before ANY session success → likely geo-block, trip breaker
+      if(!kl && !pi && !BX.everOk) BX.dead++;
       return null;
     }
     BX.dead = 0; BX.everOk = true;
@@ -26356,8 +26355,8 @@ async function bx_fetch(base){
     var ret6 = (closes[L-1]/closes[Math.max(0,L-7)]-1)*100;
     var mark = pi ? +pi.markPrice : null;
     var fr   = pi ? +pi.lastFundingRate*100 : null;
-    var spot = sp ? +sp.price : null;
-    var basis = (mark && spot) ? (mark-spot)/spot*100 : null;
+    var spot = mark; // use markPrice as spot — api.binance.com is geo-blocked in India
+    var basis = null; // basis needs separate spot feed — unavailable, skip
     var o = {ts:Date.now(), ok:true, sym:sym, ret1:ret1, ret6:ret6, funding:fr, basis:basis, mark:mark, spot:spot};
     BX.cache[sym] = o;
     return o;
