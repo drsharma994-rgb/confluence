@@ -2892,15 +2892,16 @@ async function fetchTakerRatio(symbol){
   return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
 }
 
+let _cgDead=false; // CoinGecko geo-blocked/rate-limited — disable after first failure
 async function fetchSpotPrice(base){
-  // CoinGecko free API — no key needed
+  if(_cgDead)return null;
   try{
     const id=({'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'}[base])||base.toLowerCase();
-    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd',{signal:AbortSignal.timeout(5000)});
-    if(!r.ok)return null;
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd',{signal:AbortSignal.timeout(4000)});
+    if(!r.ok){_cgDead=true;return null;}
     const d=await r.json();
     return d[id]?.usd||null;
-  }catch(e){return null;}
+  }catch(e){_cgDead=true;return null;}
 }
 
 function fundingSecondsLeft(){
@@ -26293,7 +26294,7 @@ var BX = { cache:{}, dead:0 };
 function bx_sym(base){ return String(base||'').toUpperCase().replace(/USDT?$/,'').replace(/[^A-Z0-9]/g,'') + 'USDT'; }
 
 async function bx_fetch(base){
-  if(BX.dead >= 2) return null; // geo-blocked / offline — layer disabled
+  if(BX.dead >= 1) return null; // geo-blocked / offline — layer disabled (trips on first failure)
   var sym = bx_sym(base);
   var c = BX.cache[sym];
   if(c && Date.now()-c.ts < 300000) return c.ok ? c : null; // 5 min TTL
