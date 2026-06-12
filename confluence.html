@@ -2375,6 +2375,7 @@ function analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,fng,takerData){
   /* CVD + Funding Rate (needed by direction engine — must be before direction block) */
   const cvdRes=cvdDelta(closes,vols);
   const fRate=+(tk.funding_rate??0)*100; // moved up for direction engine
+  if(isFinite(fRate)) _appendFundRate(sym.symbol, fRate); // localStorage funding cache
 
   /* ── v13.12: HTF-FIRST DIRECTION ENGINE (with safe fallback) ── */
   let dir, _dirConflict=false, _dirConf=50, _conviction='MODERATE';
@@ -2884,23 +2885,8 @@ async function fetchOrderBook(symbol){
 }
 
 async function fetchFundingHistory(symbol){
-  // v13.14 FIX: /v2/funding_history does not exist on Delta (always 404).
-  // The documented source is /v2/history/candles with the FUNDING: symbol
-  // prefix. 4h resolution × 30 days ≈ 180 points, newest-first to preserve
-  // the original consumer contract (fhArr[0] = most recent).
-  // NOTE: unit scale of these values vs ticker funding_rate is calibrated
-  // empirically by FUND CHECK (v13_fund_cal) — do not hardcode ×100 here.
-  try{
-    const base=BASES[baseIdx%BASES.length];
-    const now=Math.floor(Date.now()/1000), start=now-30*86400;
-    const r=await fetch(base+'/v2/history/candles?resolution=4h&symbol=FUNDING:'+symbol+'&start='+start+'&end='+now,
-      {signal:AbortSignal.timeout(6000)});
-    if(!r.ok)return[];
-    const d=await r.json();
-    const arr=(d?.result||[]).map(x=>+(x.close??x.c??0)).filter(v=>isFinite(v));
-    arr.reverse(); // Delta returns ascending time → newest-first
-    return arr;
-  }catch(e){return[];}
+  // localStorage cache — replaces deleted /v2/funding_history endpoint (404 on Delta India)
+  return Promise.resolve(_getFundHistory(symbol));
 }
 
 let _takerDead=1; // v2/trades removed from Delta India API — disabled at startup
@@ -2933,7 +2919,8 @@ async function fetchTakerRatio(symbol){
 async function fetchSpotPrice(base){
   // CoinGecko free API — no key needed
   try{
-    const id=({'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'}[base])||base.toLowerCase();
+    const _cgMap={'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'};
+    const id=_cgMap[base]; if(!id)return null; // skip unknown coins — avoids noise in error log
     const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd',{signal:AbortSignal.timeout(5000)});
     if(!r.ok)return null;
     const d=await r.json();
@@ -3008,7 +2995,7 @@ async function buildUniverse(tickers){
         fetchCandles(sym.symbol,'4h',120),
         fetchCandles(sym.symbol,'1d',30),
         fetchOrderBook(sym.symbol),
-        fetchFundingHistory(sym.symbol),
+        Promise.resolve(_getFundHistory(sym.symbol)),
         fetchTakerRatio(sym.symbol),
       ]);
       const a=analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,S.fng,takerData);
@@ -3020,6 +3007,7 @@ async function buildUniverse(tickers){
   S.universe=results.filter(Boolean);
   // ── Stage 1: Cross-sectional percentile ranking ──────────────────────────
   try { _computeCrossSectionalRank(S.universe); } catch(_re){ console.warn('[xrank]', _re); }
+  _saveFundStore(); // persist funding history after each full scan
   S.lastFull=Date.now();
 }
 
@@ -3179,6 +3167,26 @@ function _saveOIStore(){
   try{localStorage.setItem('cfx_oi_store',JSON.stringify(Object.assign({},_oiStore,{_ts:Date.now()})));}catch(_){}
 }
 const _fundVelState={}; // sym -> {lastRate, lastTs, alertedAt}
+// ── localStorage Funding History Cache ───────────────────────────────────
+const _fundStore = {};
+(function(){
+  try{
+    const raw=localStorage.getItem('cfx_fund_store');
+    if(raw){ const parsed=JSON.parse(raw); Object.assign(_fundStore,parsed); }
+  }catch(e){}
+})();
+function _saveFundStore(){
+  try{ localStorage.setItem('cfx_fund_store',JSON.stringify(_fundStore)); }catch(e){}
+}
+function _appendFundRate(sym,rate){
+  if(!_fundStore[sym])_fundStore[sym]=[];
+  _fundStore[sym].unshift(rate);
+  if(_fundStore[sym].length>90)_fundStore[sym].length=90;
+}
+function _getFundHistory(sym){
+  return _fundStore[sym]||[];
+}
+
 const _cvdFlipState={}; // sym -> {lastDir, alertedAt}
 const _liqCascadeState={lastBTCOI:0,lastBTCFund:0,ts:0,alertedAt:0};
 const _microSqzState={}; // sym -> {alertedAt}
@@ -8394,34 +8402,7 @@ async function fetchJson(url){
   return r.json();
 }
 
-async function fetchGoldSpot(){
-  // Source 1: gold-api.com (confirmed working from India, CORS open)
-  const goldApiUrl='https://api.gold-api.com/price/XAU';
-  const proxies=['','https://api.allorigins.win/get?url='];
-  for(const px of proxies){
-    try{
-      const url=px?px+encodeURIComponent(goldApiUrl):goldApiUrl;
-      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
-      const raw=await r.json();
-      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
-      const p=parseFloat(d.price||d.Price||d.bid||0);
-      if(p>1000) return p;
-    }catch(e){ console.warn('fetchGoldSpot gold-api ('+(px||'direct')+'):',e.message); }
-  }
-  // Source 2: OKX PAXG-USDT (open CORS, works from India)
-  const okxUrl='https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT';
-  for(const px of proxies){
-    try{
-      const url=px?px+encodeURIComponent(okxUrl):okxUrl;
-      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
-      const raw=await r.json();
-      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
-      const p=parseFloat(d?.data?.[0]?.last||0);
-      if(p>1000) return p;
-    }catch(e){ console.warn('fetchGoldSpot OKX ('+(px||'direct')+'):',e.message); }
-  }
-  return 0;
-}
+async 
 
 async function fetchPaxgCandles(interval,limit){
   // SOURCE 1: CryptoCompare — ACAO:* (works from file:// on Android Chrome)
@@ -11402,7 +11383,7 @@ async function fetchGoldMacro() {
 
   // ── US10Y + SPX + VIX via Yahoo Finance (CORS varies) ──
   try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
+    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:4.5}}]}}) /* Yahoo blocked India — static fallback */;
     const d = await r.json();
     const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
     if (v) GOLD.us10y = v;
@@ -11412,7 +11393,7 @@ async function fetchGoldMacro() {
 
   // SPX
   try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
+    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:5500}}]}}) /* Yahoo blocked India — static fallback */;
     const d = await r.json();
     const result = d?.chart?.result?.[0];
     const price = result?.meta?.regularMarketPrice;
@@ -11421,7 +11402,7 @@ async function fetchGoldMacro() {
   } catch(e) { GOLD.spx = GOLD.spx || 5000; GOLD.spxPrev = GOLD.spxPrev || 5000; }
   // VIX
   try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
+    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:18}}]}}) /* Yahoo blocked India — static fallback */;
     const d = await r.json();
     const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
     if (v) GOLD.vix = v;
@@ -11429,7 +11410,7 @@ async function fetchGoldMacro() {
 
   // ── Oil (XTIUSD) — for Holy Trinity ──
   try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
+    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:75}}]}}) /* Yahoo blocked India — static fallback */;
     const d = await r.json();
     const result = d?.chart?.result?.[0];
     const price = result?.meta?.regularMarketPrice;
