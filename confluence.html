@@ -1761,7 +1761,7 @@ audio{display:none}
    10. Browser push notification support
 ============================================================ */
 
-const BASES=["https://api.india.delta.exchange","https://api.delta.exchange"];
+const BASES=["https://api.india.delta.exchange"]; // api.delta.exchange removed — times out from India
 const FNG_URL="https://api.alternative.me/fng/?limit=1";
 const API=((new URLSearchParams(location.search)).get('api')||"").replace(/\/+$/,"");
 const FULL_EVERY=150,PRICE_EVERY=25,NFACT=12; // OI excluded (data flat)
@@ -14968,7 +14968,7 @@ async function gsMultiFunding(spotPrice, c5m) {
     try {
       resp = await fetch('https://api.india.delta.exchange/v2/funding_rates?product_symbol=GOLDUSDM', { signal: AbortSignal.timeout(4000) });
     } catch(e1) {
-      resp = await fetch('https://api.delta.exchange/v2/funding_rates?product_symbol=GOLDUSDM', { signal: AbortSignal.timeout(4000) });
+      resp = await fetch('https://api.india.delta.exchange/v2/funding_rates?product_symbol=GOLDUSDM', { signal: AbortSignal.timeout(4000) });
     }
     const data = await resp.json();
     const rate = parseFloat(data?.result?.[0]?.funding_rate || data?.result?.funding_rate || 0);
@@ -16169,7 +16169,7 @@ const CA = {
 // CONSTANTS
 // ---------------------------------------------------------------------------
 const CA_BASE_PRIMARY   = 'https://api.india.delta.exchange/v2';
-const CA_BASE_FALLBACK  = 'https://api.delta.exchange/v2';
+const CA_BASE_FALLBACK  = 'https://api.india.delta.exchange/v2'; // global endpoint removed — times out from India
 const CA_SCAN_INTERVAL  = 300000; // 5 minutes
 const CA_FETCH_TIMEOUT  = 5000;
 const CA_MAX_COINS      = 20;
