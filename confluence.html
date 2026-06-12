@@ -11298,42 +11298,14 @@ async function fetchGoldMacro() {
     }
   } catch(e) { GOLD.dxy = GOLD.dxy || 104; }
 
-  // ── US10Y + SPX + VIX via Yahoo Finance (CORS varies) ──
-  try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
-    const d = await r.json();
-    const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if (v) GOLD.us10y = v;
-  } catch(e) { GOLD.us10y = GOLD.us10y || 4.5; }
-  // Real Yield proxy: US10Y - 2.3% (avg 10Y breakeven inflation in 2026)
+  // ── US10Y + SPX + VIX + Oil ──
+  // Yahoo Finance is blocked in India. Use static fallbacks — values update if cached from previous run.
+  // These are macro context only and do not affect entry/stop/target calculations.
+  if (!GOLD.us10y) GOLD.us10y = 4.5;
   GOLD.realYield = GOLD.us10y - 2.3;
-
-  // SPX
-  try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
-    const d = await r.json();
-    const result = d?.chart?.result?.[0];
-    const price = result?.meta?.regularMarketPrice;
-    const prev = result?.meta?.chartPreviousClose;
-    if (price) { GOLD.spx = price; GOLD.spxPrev = prev || price; }
-  } catch(e) { GOLD.spx = GOLD.spx || 5000; GOLD.spxPrev = GOLD.spxPrev || 5000; }
-  // VIX
-  try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
-    const d = await r.json();
-    const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if (v) GOLD.vix = v;
-  } catch(e) { GOLD.vix = GOLD.vix || 18; }
-
-  // ── Oil (XTIUSD) — for Holy Trinity ──
-  try {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
-    const d = await r.json();
-    const result = d?.chart?.result?.[0];
-    const price = result?.meta?.regularMarketPrice;
-    const prev = result?.meta?.chartPreviousClose;
-    if (price) { GOLD.oil = price; GOLD.oilPrev = prev || price; }
-  } catch(e) { GOLD.oil = GOLD.oil || 75; GOLD.oilPrev = GOLD.oilPrev || 75; }
+  if (!GOLD.spx)   { GOLD.spx = 5500; GOLD.spxPrev = 5500; }
+  if (!GOLD.vix)   GOLD.vix = 18;
+  if (!GOLD.oil)   { GOLD.oil = 75; GOLD.oilPrev = 75; }
   // Silver price for Gold/Silver ratio
   try {
     const xagR = await fetch('https://api.gold-api.com/price/XAG',{signal:AbortSignal.timeout(5000)});
