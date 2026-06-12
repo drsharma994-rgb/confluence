@@ -2971,11 +2971,16 @@ async function buildUniverse(tickers){
         fetchCandles(sym.symbol,'4h',120),
         fetchCandles(sym.symbol,'1d',30),
         fetchOrderBook(sym.symbol),
-        fetchFundingHistory(sym.symbol),
+        Promise.resolve(_getFundHistory(sym.symbol)), // localStorage cache — no API call needed
         fetchTakerRatio(sym.symbol),
       ]);
       const a=analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,S.fng,takerData);
-      if(a){ _partialResults.push(a); S.universe=_partialResults.slice(); return a; }
+      if(a){
+        // Append this scan's live fRate to persistent history
+        const _liveRate=+(tk.funding_rate??0)*100;
+        if(isFinite(_liveRate)) _appendFundRate(sym.symbol, _liveRate);
+        _partialResults.push(a); S.universe=_partialResults.slice(); return a;
+      }
     }catch(e){console.error('[v13.12 analyzeFull]',sym?.symbol,e?.message||String(e));return null;}
     return null;
   });
@@ -2983,6 +2988,7 @@ async function buildUniverse(tickers){
   S.universe=results.filter(Boolean);
   // ── Stage 1: Cross-sectional percentile ranking ──────────────────────────
   try { _computeCrossSectionalRank(S.universe); } catch(_re){ console.warn('[xrank]', _re); }
+  _saveFundStore(); // Persist funding history to localStorage after each full scan
   S.lastFull=Date.now();
 }
 
@@ -3141,6 +3147,37 @@ const _oiStore={}; // sym -> last known OI for cross-scan diff
 function _saveOIStore(){
   try{localStorage.setItem('cfx_oi_store',JSON.stringify(Object.assign({},_oiStore,{_ts:Date.now()})));}catch(_){}
 }
+
+// ── FUNDING HISTORY CACHE ────────────────────────────────────────────────────
+// /v2/funding_history removed from Delta India API. We rebuild history by
+// appending each scan's live fRate to localStorage. Max 90 samples (~30 days
+// of 8-hour funding). This restores fundFlip, CROWDED badges, percentiles.
+const _fundStore = {}; // sym -> [rate0(newest), rate1, ...rate89]
+(function(){
+  try{
+    const _d = JSON.parse(localStorage.getItem('cfx_fund_store')||'{}');
+    // No staleness guard — funding history is cumulative, keep indefinitely
+    Object.keys(_d).forEach(k=>{ if(k!=='_ts'&&Array.isArray(_d[k])) _fundStore[k]=_d[k]; });
+  }catch(_){}
+})();
+function _saveFundStore(){
+  try{
+    const payload = Object.assign({},_fundStore,{_ts:Date.now()});
+    localStorage.setItem('cfx_fund_store', JSON.stringify(payload));
+  }catch(_){}
+}
+function _appendFundRate(sym, rate){
+  // rate must be in percent (already ×100)
+  if(!isFinite(rate)) return;
+  if(!_fundStore[sym]) _fundStore[sym]=[];
+  // Prepend newest rate, keep max 90 samples
+  _fundStore[sym].unshift(rate);
+  if(_fundStore[sym].length > 90) _fundStore[sym].length = 90;
+}
+function _getFundHistory(sym){
+  return _fundStore[sym] || [];
+}
+
 const _fundVelState={}; // sym -> {lastRate, lastTs, alertedAt}
 const _cvdFlipState={}; // sym -> {lastDir, alertedAt}
 const _liqCascadeState={lastBTCOI:0,lastBTCFund:0,ts:0,alertedAt:0};
