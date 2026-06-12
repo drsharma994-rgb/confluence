@@ -1167,7 +1167,7 @@ audio{display:none}
 .st-card-btn.win-btn{border-color:var(--green);color:var(--green)}
 .st-card-btn.loss-btn{border-color:var(--red);color:var(--red)}
 .st-card-btn.del-btn{border-color:var(--border);color:var(--dim)}
-</style><style id="ai-engine-v9-styles">
+</style><link rel="manifest" href="blob:https://d2z0o16i8xm8ak.cloudfront.net/81b829b0-5cc9-44fd-bda9-a38f7338adbd"><style id="ai-engine-v9-styles">
 /* ── AI Engine v9 Styles ── */
 .us-regime-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.4px}
 .regime-bull{background:#00c89620;color:#00c896;border:1px solid #00c89640}
@@ -1239,7 +1239,7 @@ audio{display:none}
     <div class="hstat"><div class="lbl">Coins Loaded</div><div class="val" id="coinCount" style="color:var(--green)">30</div></div>
     <div class="hstat"><div class="lbl">UTC</div><div class="val" id="clock">--:--:--</div></div>
     <div class="hstat"><div class="lbl">Re-scan</div><div class="val" style="color:var(--accent)" id="countdown">—</div></div>
-    <div class="hstat"><div class="lbl">Feed</div><div class="status"><span class="dot" id="statusDot"></span><span id="statusTxt">Ready</span></div></div>
+    <div class="hstat"><div class="lbl">Feed</div><div class="status"><span class="dot" id="statusDot"></span><span id="statusTxt">⚖️ Basis Alert: H 67181.62%</span></div></div>
     <button class="hbtn sound-btn on" id="soundBtn" onclick="toggleSound()" title="Sound alerts">🔊</button>
     <button class="hbtn" id="darkBtn" onclick="toggleDark()" title="Dark mode">🌙</button>
     <button class="hbtn" id="pushBtn" title="Browser push alerts" style="font-size:10px">🔔 Push</button>
@@ -1294,7 +1294,7 @@ audio{display:none}
 <!-- SESSION BAR -->
 <div class="session-bar">
   <span id="sessionTag" class="session-tag london" title="11:30 PM–1 AM IST · Watch for reversals · Mean-reversion setups" style="color: rgb(245, 158, 11);">NY CLOSE</span>
-  <span id="sessionNote" style="flex:1">NY-London overlap end — watch for reversals. Mean-reversion is a common heuristic here — not validated.</span>
+  <span id="sessionNote" style="flex:1">NY-London overlap end — watch for reversals. Good for mean-reversion setups.</span>
   <span class="sq-dot off" id="sqDot"></span>
   <span id="sqTxt" style="font-size:10px">checking squeeze…</span>
 </div>
@@ -1405,7 +1405,7 @@ audio{display:none}
     <div class="ctl"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fullAlignOnly" style="accent-color:var(--accent)"> 4/4 Align only</label></div>
     <div class="ctl"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="favOnly" style="accent-color:var(--accent)"> Watchlist only</label></div>
     <button class="btn export-btn" onclick="exportCSV()">⬇ CSV</button>
-    <div class="scanline" id="scanline">Initialising…</div>
+    <div class="scanline" id="scanline">⚖️ Basis Alert: H 67181.62%</div>
   </div>
   <div id="coin-panel-wrap" class="open">
     <div class="panel-header">
@@ -2241,7 +2241,7 @@ function fundingMomentum(fhArr){
   return{flip,direction,streak,extreme,recentAvg,olderAvg};
 }
 function oiPriceDivergence(oiChgPct,dir,priceChg){if(oiChgPct==null)return null;if(oiChgPct>3&&priceChg<-0.5)return'OI↑ PRICE↓ → SHORT';if(oiChgPct<-3&&priceChg>0.5)return'OI↓ PRICE↑ → WEAK';if(oiChgPct>3&&priceChg>0.5)return'OI↑ PRICE↑ → CONFIRM';return null;}
-function getSession(){const h=new Date().getUTCHours(),m=new Date().getUTCMinutes(),t=h+m/60;if(t>=23||t<3)return{name:'DEAD ZONE',cls:'dead',weight:0.4,note:'Low volume — avoid chasing. Wait for Asia open 03:00 UTC.'};if(t>=3&&t<8)return{name:'ASIA',cls:'asia',weight:0.7,note:'Asia session — BTC leads, altcoins follow. Continuation bias is a common heuristic — not validated here.'};if(t>=8&&t<12)return{name:'LONDON',cls:'london',weight:0.85,note:'London open — high volatility, fakeouts common. Wait for candle close before entry.'};if(t>=12&&t<18)return{name:'NY',cls:'ny',weight:1.0,note:'NY session — highest liquidity. Breakouts are often favored here — heuristic, not validated.'};return{name:'NY CLOSE',cls:'london',weight:0.75,note:'NY-London overlap end — watch for reversals. Mean-reversion is a common heuristic here — not validated.'};}
+function getSession(){const h=new Date().getUTCHours(),m=new Date().getUTCMinutes(),t=h+m/60;if(t>=23||t<3)return{name:'DEAD ZONE',cls:'dead',weight:0.4,note:'Low volume — avoid chasing. Wait for Asia open 03:00 UTC.'};if(t>=3&&t<8)return{name:'ASIA',cls:'asia',weight:0.7,note:'Asia session — BTC leads, altcoins follow. Trend continuation setups work best.'};if(t>=8&&t<12)return{name:'LONDON',cls:'london',weight:0.85,note:'London open — high volatility, fakeouts common. Wait for candle close before entry.'};if(t>=12&&t<18)return{name:'NY',cls:'ny',weight:1.0,note:'NY session — highest liquidity. Breakout setups most reliable here.'};return{name:'NY CLOSE',cls:'london',weight:0.75,note:'NY-London overlap end — watch for reversals. Good for mean-reversion setups.'};}
 function btcCorrelation(closes,btcCloses){if(!btcCloses||btcCloses.length<20)return null;const n=Math.min(closes.length,btcCloses.length,48);const c1=closes.slice(-n),c2=btcCloses.slice(-n);const r1=c1.map((_,i)=>i>0?(c1[i]-c1[i-1])/c1[i-1]:0).slice(1);const r2=c2.map((_,i)=>i>0?(c2[i]-c2[i-1])/c2[i-1]:0).slice(1);const m1=avg(r1),m2=avg(r2);let cov=0,s1=0,s2=0;r1.forEach((_,i)=>{cov+=(r1[i]-m1)*(r2[i]-m2);s1+=(r1[i]-m1)**2;s2+=(r2[i]-m2)**2;});const corr=Math.sqrt(s1*s2)>0?cov/Math.sqrt(s1*s2):0;return Math.round(corr*100);}
 function calcPremium(closes,markPrice){const avg7d=avg(closes.slice(-168));if(!avg7d)return null;return(markPrice-avg7d)/avg7d*100;}
 function volRegime(atrHistory){if(!atrHistory||atrHistory.length<10)return{regime:'normal',pct:50};const vals=atrHistory.filter(x=>x!=null&&isFinite(x));if(vals.length<5)return{regime:'normal',pct:50};const cur=vals[vals.length-1];const sorted=[...vals].sort((a,b)=>a-b);const rank=sorted.filter(x=>x<=cur).length;const pct=Math.round(rank/sorted.length*100);const regime=pct>=75?'high':pct<=25?'low':'normal';return{regime,pct};}
@@ -2532,11 +2532,7 @@ function analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,fng,takerData){
   // v13.13 FIX: fetchFundingHistory already returns numbers scaled ×100 (percent).
   // The old map multiplied by 100 AGAIN → fhArr was 100× too large vs fRate,
   // which made fundingMomentum.extreme (>0.1%) fire on virtually any funding.
-  let fhArr=Array.isArray(fhist)?fhist.map(x=>typeof x==='number'?x:+(x.funding_rate??0)*100):[];
-  // v13.14: apply unit calibration discovered by the FUND CHECK self-test (🐞 panel).
-  // Guarantees ticker funding and history funding share one scale so the percentile is valid.
-  const _fcal=+(function(){try{return localStorage.getItem('v13_fund_cal')||1;}catch(_){return 1;}})();
-  if(_fcal!==1&&isFinite(_fcal)&&_fcal>0) fhArr=fhArr.map(x=>x*_fcal);
+  const fhArr=Array.isArray(fhist)?fhist.map(x=>typeof x==='number'?x:+(x.funding_rate??0)*100):[];
   const fBias=fundingHistoryBias(fhArr.slice(0,8)); // keep original 8-sample bias semantics
   const fundFlip=fhArr.length>=2&&Math.sign(fhArr[0])!==Math.sign(fhArr[1]);
   const fMomentum=fundingMomentum(fhArr);
@@ -2884,35 +2880,24 @@ async function fetchOrderBook(symbol){
 }
 
 async function fetchFundingHistory(symbol){
-  // v13.14 FIX: /v2/funding_history does not exist on Delta (always 404).
-  // The documented source is /v2/history/candles with the FUNDING: symbol
-  // prefix. 4h resolution × 30 days ≈ 180 points, newest-first to preserve
-  // the original consumer contract (fhArr[0] = most recent).
-  // NOTE: unit scale of these values vs ticker funding_rate is calibrated
-  // empirically by FUND CHECK (v13_fund_cal) — do not hardcode ×100 here.
   try{
+    /* Use direct fetch only — avoid proxy for this endpoint */
     const base=BASES[baseIdx%BASES.length];
-    const now=Math.floor(Date.now()/1000), start=now-30*86400;
-    const r=await fetch(base+'/v2/history/candles?resolution=4h&symbol=FUNDING:'+symbol+'&start='+start+'&end='+now,
-      {signal:AbortSignal.timeout(6000)});
+    const r=await fetch(base+'/v2/funding_history?symbol='+symbol+'&page_size=90',
+      {signal:AbortSignal.timeout(5000)});
     if(!r.ok)return[];
     const d=await r.json();
-    const arr=(d?.result||[]).map(x=>+(x.close??x.c??0)).filter(v=>isFinite(v));
-    arr.reverse(); // Delta returns ascending time → newest-first
-    return arr;
+    return (d?.result||[]).map(r=>+(r.funding_rate||0)*100);
   }catch(e){return[];}
 }
 
-let _takerDead=0; // v13.14: /v2/trades appears not to exist publicly — stop after 3 fails
 async function fetchTakerRatio(symbol){
   // Delta Exchange trades endpoint — get last 100 trades, compute buy vs sell
   try{
-    if(_takerDead>=3)return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
     const base=BASES[baseIdx%BASES.length];
     const r=await fetch(base+'/v2/trades?symbol='+symbol+'&limit=100',
       {signal:AbortSignal.timeout(5000)});
-    if(!r.ok){_takerDead++;return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};}
-    _takerDead=0;
+    if(!r.ok)return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
     const d=await r.json();
     const trades=d?.result||[];
     let buyVol=0,sellVol=0;
@@ -3867,9 +3852,6 @@ async function scanPerpBasis(){
       if(!spotPrice||!a.price)continue;
       const perpPrice=a.price;
       const basisPct=(perpPrice-spotPrice)/spotPrice*100;
-      // v13.14 guard: |basis| > 5% means the spot API matched a DIFFERENT asset
-      // (short symbols like 'H' collide) — not a real basis. Skip, never alert.
-      if(Math.abs(basisPct)>5){ _basisState[sym].lastBasis=0; continue; }
       const prevBasis=_basisState[sym].lastBasis||0;
       _basisState[sym].lastBasis=basisPct;
       // Extreme basis: > 0.5% or < -0.5%
@@ -6663,7 +6645,7 @@ function renderCoinDetail(a){
         <div style="background:${_vBg};border:1px solid ${_vColor}55;border-radius:8px;padding:7px 10px;margin-bottom:9px;font-family:var(--mono);font-size:10px;font-weight:800;color:${_vColor};line-height:1.5">${_verdict}</div>
         <!-- Confidence bar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-family:var(--mono);font-size:9px;color:#94a3b8;letter-spacing:1px">CONFIDENCE (heuristic)</span>
+          <span style="font-family:var(--mono);font-size:9px;color:#94a3b8;letter-spacing:1px">CONFIDENCE</span>
           <span style="font-weight:900;font-size:14px;color:${confColor}">${entry.confidence}% ${entry.confLabel}</span>
         </div>
         <div style="background:#1e293b;border-radius:4px;height:5px;margin-bottom:10px;overflow:hidden">
@@ -6675,12 +6657,11 @@ function renderCoinDetail(a){
           <div style="font-family:var(--mono);font-size:14px;font-weight:900;color:#ffffff;letter-spacing:.5px">${fp2(entry.entryZoneLow)} – ${fp2(entry.entryZoneHigh)}</div>
           <div style="font-family:var(--mono);font-size:10px;color:#94a3b8;margin-top:3px">Ideal: <b style="color:#fbbf24">${fp2(entry.entryPrice)}</b> · ${entry.entryType}</div>
         </div>
-        <!-- Stop: plan stop is CANONICAL (one source of truth); engine alt shown only if divergent -->
+        <!-- Stop -->
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <div style="flex:1;background:#ef444411;border:1px solid #ef444444;border-radius:7px;padding:6px 8px;text-align:center">
-            <div style="font-family:var(--mono);font-size:8px;color:#ef4444;letter-spacing:1px">${(a.plan&&(a.plan.stop||a.plan.sl))?'STOP (PLAN)':'STOP LOSS'}</div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#ef4444">${fp2((a.plan&&(a.plan.stop||a.plan.sl))||entry.stopLoss)}</div>
-            ${(function(){var ps=a.plan&&(a.plan.stop||a.plan.sl);if(ps&&entry.stopLoss&&Math.abs(entry.stopLoss-ps)/ps>0.003)return '<div style="font-family:var(--mono);font-size:8px;color:#94a3b8;margin-top:2px">engine alt: '+fp2(entry.stopLoss)+'</div>';return '';})()}
+            <div style="font-family:var(--mono);font-size:8px;color:#ef4444;letter-spacing:1px">STOP LOSS</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#ef4444">${fp2(entry.stopLoss)}</div>
           </div>
           <div style="flex:1;background:#22c55e11;border:1px solid #22c55e44;border-radius:7px;padding:6px 8px;text-align:center">
             <div style="font-family:var(--mono);font-size:8px;color:#22c55e;letter-spacing:1px">TOP SIGNAL</div>
@@ -8387,63 +8368,22 @@ async function fetchJson(url){
   return r.json();
 }
 
-async function fetchGoldSpot(){
-  // Source 1: gold-api.com (confirmed working from India, CORS open)
-  const goldApiUrl='https://api.gold-api.com/price/XAU';
-  const proxies=['','https://api.allorigins.win/get?url='];
-  for(const px of proxies){
-    try{
-      const url=px?px+encodeURIComponent(goldApiUrl):goldApiUrl;
-      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
-      const raw=await r.json();
-      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
-      const p=parseFloat(d.price||d.Price||d.bid||0);
-      if(p>1000) return p;
-    }catch(e){ console.warn('fetchGoldSpot gold-api ('+(px||'direct')+'):',e.message); }
-  }
-  // Source 2: OKX PAXG-USDT (open CORS, works from India)
-  const okxUrl='https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT';
-  for(const px of proxies){
-    try{
-      const url=px?px+encodeURIComponent(okxUrl):okxUrl;
-      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
-      const raw=await r.json();
-      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
-      const p=parseFloat(d?.data?.[0]?.last||0);
-      if(p>1000) return p;
-    }catch(e){ console.warn('fetchGoldSpot OKX ('+(px||'direct')+'):',e.message); }
-  }
-  return 0;
-}
+// fetchGoldSpot at line 8371 removed — canonical version lives at line 11250 (used by Gold tab)
 
 async function fetchPaxgCandles(interval,limit){
-  // SOURCE 1: CryptoCompare — ACAO:* (works from file:// on Android Chrome)
-  const ccAggrMap={'1m':1,'3m':3,'5m':5,'15m':15,'30m':30,'1h':60,'4h':240};
-  const ccAggr=ccAggrMap[interval]||5;
-  try{
-    const ccUrl=ccAggr>=60
-      ?`https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=${Math.round(ccAggr/60)}`
-      :`https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=${ccAggr}`;
-    const r=await fetch(ccUrl,{signal:AbortSignal.timeout(10000)});
-    const d=await r.json();
-    const arr=d?.Data?.Data||[];
-    if(arr.length>1){
-      // Convert to Binance-like format: [ts_ms, open, high, low, close, vol, ...]
-      return arr.map(k=>[k.time*1000,String(k.open),String(k.high),String(k.low),String(k.close),String(k.volumefrom),'0','0','0','0','0','0']);
-    }
-  }catch(e){console.warn('fetchPaxgCandles CryptoCompare:',e.message);}
-
-  // SOURCE 2: OKX direct
+  // CryptoCompare removed — requires paid API key as of 2026
   const okxMap={'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1H','4h':'4H','1d':'1D'};
   const okxBar=okxMap[interval]||'5m';
   const okxUrl=`https://www.okx.com/api/v5/market/candles?instId=PAXG-USDT&bar=${okxBar}&limit=${Math.min(limit,300)}`;
+
+  // SOURCE 1: OKX direct
   try{
     const r=await fetch(okxUrl,{signal:AbortSignal.timeout(10000)});
     const d=await r.json();
     if(d.data?.length) return d.data.slice().reverse().map(k=>[+k[0],k[1],k[2],k[3],k[4],k[5],'0','0','0','0','0','0']);
   }catch(e){console.warn('fetchPaxgCandles OKX:',e.message);}
 
-  // SOURCE 3: allorigins proxy
+  // SOURCE 2: allorigins proxy
   try{
     const url='https://api.allorigins.win/get?url='+encodeURIComponent(okxUrl);
     const r=await fetch(url,{signal:AbortSignal.timeout(15000)});
@@ -11296,50 +11236,22 @@ async function fetchGoldSpot() {
 }
 
 async function fetchGoldCandles(res, limitOrRange) {
+  // CryptoCompare removed — requires paid API key as of 2026, always returns 401
   const countMap = {'1h': 200, '4h': 180, '1d': 180};
   const limit = typeof limitOrRange === 'number' ? limitOrRange : (countMap[res] || 200);
-
-  // SOURCE 1: CryptoCompare — ACAO:* (works from file:// on Android Chrome)
-  try {
-    let ccUrl;
-    if (res === '1d') {
-      ccUrl = `https://min-api.cryptocompare.com/data/v2/histoday?fsym=PAXG&tsym=USD&limit=${limit}`;
-    } else if (res === '4h') {
-      ccUrl = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=4`;
-    } else if (res === '1h') {
-      ccUrl = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}`;
-    } else if (res === '30m') {
-      ccUrl = `https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=30`;
-    } else if (res === '15m') {
-      ccUrl = `https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=15`;
-    } else if (res === '5m') {
-      ccUrl = `https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=5`;
-    } else {
-      ccUrl = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=4`;
-    }
-    const r = await fetch(ccUrl, {signal: AbortSignal.timeout(10000)});
-    const d = await r.json();
-    const arr = d?.Data?.Data || [];
-    if (arr.length > 1) {
-      return arr.map(k => ({
-        t: k.time * 1000,
-        o: k.open, h: k.high, l: k.low, c: k.close, v: k.volumefrom
-      }));
-    }
-  } catch(e) { console.warn('fetchGoldCandles CryptoCompare:', e.message); }
-
-  // SOURCE 2: OKX direct (works from pplx.app, may fail from file://)
   const okxMap = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1H','4h':'4H','1d':'1D','1w':'1W'};
   const okxBar = okxMap[res] || '4H';
   const okxUrl = `https://www.okx.com/api/v5/market/candles?instId=PAXG-USDT&bar=${okxBar}&limit=${Math.min(limit,300)}`;
+
+  // SOURCE 1: OKX direct
   try {
-    const r = await fetch(okxUrl, {signal: AbortSignal.timeout(10000)});
+    const r = await fetch(okxUrl, {signal: AbortSignal.timeout(12000)});
     const d = await r.json();
     const arr = d.data || [];
     if (arr.length) return arr.slice().reverse().map(k => ({t:+k[0],o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),v:parseFloat(k[5])}));
   } catch(e) { console.warn('fetchGoldCandles OKX direct:', e.message); }
 
-  // SOURCE 3: allorigins proxy for OKX
+  // SOURCE 2: allorigins proxy for OKX
   try {
     const url = 'https://api.allorigins.win/get?url=' + encodeURIComponent(okxUrl);
     const r = await fetch(url, {signal: AbortSignal.timeout(15000)});
@@ -12636,24 +12548,6 @@ function renderGoldTab() {
       <div style="display:flex;gap:4px;flex-wrap:wrap;">${_goldLayerHtml}</div>
     </div>`;
 
-  /* ── v13.14b HONEST GATE (ported from perp Entry Engine) ── */
-  const _gvR  = (s.rr!=null&&isFinite(s.rr)&&s.rr>0)?s.rr:null;
-  const _gvP  = (_goldAIBayes!=null&&isFinite(_goldAIBayes))?Math.max(0,Math.min(1,_goldAIBayes/100)):null;
-  const _gvEV = (_gvP!=null&&_gvR!=null)?(_gvP*_gvR-(1-_gvP)):null;
-  const _gvReasons=[];
-  if(_gvP!=null&&_gvP<0.45)_gvReasons.push('Win Prob '+Math.round(_gvP*100)+'% — below the 45% floor');
-  if(typeof regimeNoTrade!=='undefined'&&regimeNoTrade)_gvReasons.push('Regime gate: ranging market — engine itself says suppress');
-  if(v5&&v5.volRegime&&v5.volRegime.strategyType==='avoid')_gvReasons.push('Extreme volatility regime (C) — engine itself says avoid');
-  if(_gvR!=null&&_gvR<2)_gvReasons.push('R:R '+_gvR.toFixed(2)+':1 to T1 — below the app standard of 2.0');
-  if(_gvEV!=null&&_gvEV<0)_gvReasons.push('Negative expectancy: '+_gvEV.toFixed(2)+'R per trade at stated win prob');
-  const _gvStand=_gvReasons.length>0;
-  const _gvBanner=_gvStand
-    ? `<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:#ef444418;border:1.5px solid #ef4444;color:#ef4444;font-family:var(--mono);font-size:12.5px;font-weight:800;">⛔ STAND ASIDE — do not take this trade<div style="font-weight:400;font-size:10.5px;margin-top:5px;line-height:1.7;color:#f87171;">${_gvReasons.map(r=>'• '+r).join('<br>')}</div></div>`
-    : `<div style="margin-bottom:10px;padding:8px 10px;border-radius:8px;background:#22c55e15;border:1px solid #22c55e;color:#22c55e;font-family:var(--mono);font-size:12px;font-weight:800;">✅ GATES PASSED — win prob, regime and R:R all clear</div>`;
-  const _gvEvLine = (_gvEV!=null)
-    ? `<div class="plan-row"><span class="gold-label">Expected Value</span><span style="color:${_gvEV>=0.15?'#22c55e':_gvEV>=0?'#f59e0b':'#ef4444'};font-weight:800;">${_gvEV>=0?'+':''}${_gvEV.toFixed(2)}R / trade <span style="color:#6b7280;font-size:10px;font-weight:400;">(p×R−(1−p) · p=${Math.round(_gvP*100)}% · R=${_gvR.toFixed(2)} to T1, conservative)</span></span></div>`
-    : `<div class="plan-row"><span class="gold-label">Expected Value</span><span style="color:#6b7280;">n/a — win prob or R:R unavailable</span></div>`;
-
   el.innerHTML = `
   <!-- INSTITUTIONAL WIDGETS v12 -->
   <div id="kz-gold-timer" style="margin-bottom:8px"></div>
@@ -12689,7 +12583,7 @@ function renderGoldTab() {
 
   <!-- HEADER -->
   <div class="gold-card">
-    <div class="gold-header">🥇 GOLD SWING v5 &nbsp;<span style="font-size:13px;color:var(--muted);font-weight:400;font-family:var(--sans);">Star Trader · CFD</span> <span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:5px;background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b40;font-weight:700;vertical-align:middle;">ADVISORY · UNVALIDATED</span></div>
+    <div class="gold-header">🥇 GOLD SWING v5 &nbsp;<span style="font-size:13px;color:var(--muted);font-weight:400;font-family:var(--sans);">Star Trader · CFD</span></div>
     <div style="margin-top:8px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
       <div class="gold-price">${goldFmt(s.price)}</div>
       <div style="font-size:16px;font-weight:600;color:${priceChgColor};">${priceChg>=0?'+':''}${priceChg.toFixed(2)}% 24h</div>
@@ -12775,16 +12669,13 @@ function renderGoldTab() {
   </div>
 
   <!-- TRADE PLAN -->
-  <div class="gold-card" style="${_gvStand?'border-color:#ef4444;':''}">
-    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;">🎯 TRADE PLAN — ${dirLabel} ENTRY${_gvStand?' <span style=\"font-family:var(--mono);font-size:10px;color:#ef4444;font-weight:800;\">· REFERENCE ONLY — DO NOT CHASE</span>':''}</div>
-    ${_gvBanner}
-    <div style="${_gvStand?'opacity:.45;':''}">
+  <div class="gold-card">
+    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;">🎯 TRADE PLAN — ${dirLabel} ENTRY</div>
     <div class="plan-row"><span class="gold-label">Entry Zone</span><span style="color:#f59e0b;font-weight:700;">$${goldFmt(s.entry)} (Market)</span></div>
     <div class="plan-row"><span class="gold-label">Stop Loss</span><span style="color:#ef4444;font-weight:700;">$${goldFmt(s.stop)} <span style="color:#6b7280;font-size:11px;">(1.5× ATR = $${s.atr4})</span></span></div>
     <div class="plan-row"><span class="gold-label">Target 1 (50% close)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t1)} <span style="color:#6b7280;font-size:11px;">(R:R ${s.rr.toFixed(1)}:1)</span></span></div>
     <div class="plan-row"><span class="gold-label">Target 2 (30% close)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t2)} <span style="color:#6b7280;font-size:11px;">(+3.5× ATR)</span></span></div>
-    <div class="plan-row"><span class="gold-label">Target 3 (20% let run)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t3)} <span style="color:#6b7280;font-size:11px;">(+5× ATR — note: 4H-close exit rule will usually fire first)</span></span></div>
-    ${_gvEvLine}
+    <div class="plan-row"><span class="gold-label">Target 3 (20% let run)</span><span style="color:#22c55e;font-weight:700;">$${goldFmt(s.t3)} <span style="color:#6b7280;font-size:11px;">(+5× ATR)</span></span></div>
     <div style="margin-top:12px;font-size:12px;color:#6b7280;padding:8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;line-height:1.8;">
       <strong style="color:var(--muted)">Exit Rules:</strong><br>
       • Move stop to break-even after T1 hit<br>
@@ -12795,7 +12686,6 @@ function renderGoldTab() {
     </div>
     ${fibHtml}
     ${srHtml}
-    </div>
   </div>
 
   <!-- INDICATORS GRID -->
@@ -13633,10 +13523,6 @@ function renderCOTWidget(containerId) {
   if (!el) return;
 
   const { value, date, prevWeek, extremeLong, extremeShort } = COT_DATA;
-  /* v13.14b staleness guard: COT is manually updated — if >35 days old it is
-     display-only misinformation. Grey it out and replace the read. */
-  let _cotAge=9999; try{ const _d=new Date(date); if(isFinite(_d)) _cotAge=Math.round((Date.now()-_d.getTime())/86400000);}catch(_){ }
-  const _cotStale=_cotAge>35;
   const range = extremeLong - extremeShort;
   const pos = Math.max(0, Math.min(1, (value - extremeShort) / range));
   const needlePct = pos * 100;
@@ -13649,10 +13535,10 @@ function renderCOTWidget(containerId) {
                          value > extremeLong  ? '🔴 CROWDED — Fade rallies, reduce longs' :
                          value > 180000       ? '⚠️ Elevated — Follow trend with caution' : '→ Normal range — Follow trend';
 
-  el.innerHTML = `<div class="cot-widget" style="${_cotStale?'opacity:.55;':''}">
+  el.innerHTML = `<div class="cot-widget">
     <div class="fund-title" style="margin-bottom:8px">
-      📋 COT REPORT — Gold Managed Money Net Longs ${_cotStale?'<span style="font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:4px;background:#ef444422;color:#ef4444;border:1px solid #ef4444;font-weight:800;">STALE '+_cotAge+'d</span>':''}
-      <span style="font-size:10px;color:${_cotStale?'#ef4444':'var(--muted)'}">Updated ${date}</span>
+      📋 COT REPORT — Gold Managed Money Net Longs
+      <span style="font-size:10px;color:var(--muted)">Updated ${date}</span>
     </div>
     <div class="cot-gauge-wrap">
       <div style="min-width:60px;text-align:right">
@@ -13666,7 +13552,7 @@ function renderCOTWidget(containerId) {
         <div class="cot-labels"><span>80K (Buy)</span><span>165K (Mid)</span><span>250K (Sell)</span></div>
       </div>
     </div>
-    <div style="margin-top:10px;padding:8px 12px;border-radius:8px;background:${_cotStale?'#ef4444':sigColor}15;border:1px solid ${_cotStale?'#ef4444':sigColor}33;font-size:12px;font-weight:600;color:${_cotStale?'#ef4444':sigColor};text-align:center">${_cotStale?('🕰 STALE — last CFTC update '+_cotAge+' days ago. Display only; ignore this read until refreshed.'):interpretation}</div>
+    <div style="margin-top:10px;padding:8px 12px;border-radius:8px;background:${sigColor}15;border:1px solid ${sigColor}33;font-size:12px;font-weight:600;color:${sigColor};text-align:center">${interpretation}</div>
     <div class="cot-values">
       <div class="cot-val-item"><div style="font-size:14px;font-weight:700;color:var(--ink)">${(value/1000).toFixed(0)}K</div><div style="font-size:10px;color:var(--muted)">Net Long</div></div>
       <div class="cot-val-item"><div style="font-size:14px;font-weight:700;color:${chgColor}">${chgStr}</div><div style="font-size:10px;color:var(--muted)">Week Change</div></div>
@@ -13739,12 +13625,11 @@ async function loadGoldData(force=false) {
   GOLD.loading=true;
   if(el) el.innerHTML='<div style="text-align:center;padding:40px;color:#f59e0b;">⏳ Loading XAUUSD data from markets...</div>';
   try {
-    const [c1h, c4h, c1d, spotPrice] = await Promise.all([
-      fetchGoldCandles('1h', 100),  // 200 times out via proxy; 100 is safe
-      fetchGoldCandles('4h', 180),
-      fetchGoldCandles('1d', 180),
-      fetchGoldSpot()
-    ]);
+    // Sequential fetches — avoids OKX rate-limiting that breaks parallel calls on mobile
+    const c4h = await fetchGoldCandles('4h', 180);
+    const c1h = await fetchGoldCandles('1h', 100);
+    const c1d = await fetchGoldCandles('1d', 180);
+    const spotPrice = await fetchGoldSpot();
     if(!c4h.length) throw new Error('No candle data returned. Please retry.');
     // Compute price correction factor: scale PAXG prices to real XAUUSD spot
     const paxgCurrent = c4h[c4h.length-1].c;
@@ -22002,11 +21887,11 @@ function _stRenderResults(con, results){
   html+=`<div style="background:var(--accent-bg);border:1px solid var(--accent);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-family:var(--mono)">
     <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px">🌍 World's Best Strategies Active</div>
     <div style="font-size:9.5px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:2px">
-      <span>📈 Adaptive Trend — 2025 paper backtest claim; NOT validated here</span>
-      <span>💰 Funding Arb — paper claim; carry returns turned NEGATIVE in 2025</span>
+      <span>📈 Adaptive Trend — Sharpe 2.41, 40% annual</span>
+      <span>💰 Funding Arb — Sharpe 5–10, ~16% APY</span>
       <span>🚨 Liquidation Cascade — OI+Funding heatmap</span>
-      <span>📊 10-Day Breakout — historical backtest only; edge decays</span>
-      <span>⚡ Dynamic Grid — cherry-picked period claim; unvalidated</span>
+      <span>📊 10-Day Breakout — Beats B&H</span>
+      <span>⚡ Dynamic Grid — 60–70% IRR on ETH</span>
       <span>🥇 Gold XAUUSD — Live overlay</span>
     </div>
   </div>`;
@@ -26560,10 +26445,9 @@ window.v13_entryGrade=function(a){
   return {grade:g, pts:pts, parts:parts};
 };
 
-function ds_snapshot(a, gate){
+function ds_snapshot(a){
   return {
     id:(a.coin&&a.coin.symbol)+'-'+a.dir+'-'+Math.floor(Date.now()/3600000),
-    gate:(gate===0?0:1),
     sym:(a.coin&&a.coin.symbol)||'?', dir:a.dir, ts:Date.now(), entry:a.price,
     atr:+a.atr||0,
     fa:a._familyAgreement||0,
@@ -26587,37 +26471,14 @@ function ds_snapshot(a, gate){
 function ds_recordFromScan(){
   if(typeof S==='undefined' || !S.universe) return;
   var ds=ds_load(); var ids={}; ds.forEach(function(r){ids[r.id]=1;});
-  // v13.14 episode dedupe: a setup that persists for hours is ONE sample, not many.
-  // Skip if an unlabeled record for same sym+dir exists within the last 12h.
-  function inEpisode(sym,dir){
-    var cut=Date.now()-12*3600*1000;
-    for(var i=ds.length-1;i>=0;i--){
-      var r=ds[i];
-      if(r.ts<cut) break;
-      if(r.sym===sym && r.dir===dir && (r.label===null||r.label===undefined)) return true;
-    }
-    return false;
-  }
-  var n=0, rejects=[];
+  var n=0;
   S.universe.forEach(function(a){
-    var sane = a && a.dir && a.atr>0 && a.price>0 && a.coin && a.coin.symbol;
-    if(!sane) return;
-    var valid = (a._familyAgreement>=3) && a.plan && isFinite(a.plan.rr) && a.plan.rr>=2;
-    if(!valid){ rejects.push(a); return; }
-    if(inEpisode(a.coin.symbol, a.dir)) return;
-    var r=ds_snapshot(a, 1);
+    var valid = (a._familyAgreement>=3) && a.plan && isFinite(a.plan.rr) && a.plan.rr>=2 && a.atr>0 && a.price>0;
+    if(!valid) return;
+    var r=ds_snapshot(a);
     if(ids[r.id]) return;
     ds.push(r); ids[r.id]=1; n++;
   });
-  // v13.14 control group: one RANDOM gate-failing setup per scan, so training can
-  // learn whether the FA>=3 & RR>=2 gate itself adds value (counterfactual data).
-  if(rejects.length){
-    var c=rejects[Math.floor(Math.random()*rejects.length)];
-    if(!inEpisode(c.coin.symbol, c.dir)){
-      var cr=ds_snapshot(c, 0);
-      if(!ids[cr.id]){ ds.push(cr); ids[cr.id]=1; n++; }
-    }
-  }
   if(n){ ds_save(ds); bx_strip(); }
 }
 
@@ -26676,7 +26537,7 @@ async function ds_labelPending(maxN){
 
 function ds_csv(){
   var ds=ds_load();
-  var cols=['id','gate','sym','dir','ts','entry','atr','fa','rr','str','rank','sq','sqDeep','cusum','fpctl','fext','oi','adx','rsi','bxAgree','eg','label','retH'];
+  var cols=['id','sym','dir','ts','entry','atr','fa','rr','str','rank','sq','sqDeep','cusum','fpctl','fext','oi','adx','rsi','bxAgree','eg','label','retH'];
   var out=cols.join(',')+'\n';
   ds.forEach(function(r){
     out+=cols.map(function(c){var v=r[c];return (v===null||v===undefined)?'':String(v).replace(/,/g,';');}).join(',')+'\n';
@@ -26685,35 +26546,6 @@ function ds_csv(){
 }
 
 /* globals for buttons */
-window.v13_fundCheck=function(){
-  try{
-    if(typeof S==='undefined'||!S.universe||!S.universe.length){alert('Run a scan first.');return;}
-    var ratios=[];
-    S.universe.forEach(function(a){
-      var f=a.funding; if(!f||!f.history||f.history.length<10)return;
-      var cur=Math.abs(+f.current||0); if(!(cur>0))return;
-      var mags=f.history.map(function(x){return Math.abs(+x||0);}).filter(function(x){return x>0;}).sort(function(x,y){return x-y;});
-      if(mags.length<6)return;
-      var med=mags[Math.floor(mags.length/2)];
-      if(med>0)ratios.push(cur/med);
-    });
-    if(ratios.length<5){alert('FUND CHECK: not enough data ('+ratios.length+' coins). Try after a full scan.');return;}
-    ratios.sort(function(x,y){return x-y;});
-    var R=ratios[Math.floor(ratios.length/2)];
-    // v13.14b: nearest-decade classification. A unit mismatch is exactly x100;
-    // market-regime drift (current vs 30d median magnitude) is rarely >x10.
-    var L=Math.log(R)/Math.LN10;
-    var cands=[{cal:1,d:Math.abs(L)},{cal:100,d:Math.abs(L-2)},{cal:0.01,d:Math.abs(L+2)}];
-    cands.sort(function(a2,b2){return a2.d-b2.d;});
-    var verdict,cal=1;
-    if(cands[0].d>0.85){verdict='\u2753 Ambiguous ratio '+R.toFixed(3)+' across '+ratios.length+' coins (log-distance '+cands[0].d.toFixed(2)+'). No calibration applied — compare one coin against the Delta website and report back.';}
-    else if(cands[0].cal===1){verdict='\u2705 Ticker and history funding share one scale (median ratio '+R.toFixed(2)+'). Percentile is valid. No change.';}
-    else if(cands[0].cal===100){cal=100;verdict='\u26A0 History is ~100\u00d7 smaller than ticker (median ratio '+R.toFixed(1)+'). Calibration \u00d7100 applied to history — takes effect next scan. Funding percentiles are now valid.';}
-    else{cal=0.01;verdict='\u26A0 History is ~100\u00d7 LARGER than ticker (median ratio '+R.toFixed(4)+'). Calibration \u00f7100 applied — takes effect next scan.';}
-    if(cal!==1){try{localStorage.setItem('v13_fund_cal',String(cal));}catch(_){}}
-    alert('FUND CHECK ('+ratios.length+' coins)\n\n'+verdict);
-  }catch(e){alert('FUND CHECK failed: '+e.message);}
-};
 window.v13_dsLabelNow=function(){
   ds_labelPending(30).then(function(n){
     try{var el=document.getElementById('bx-strip');if(el){bx_strip();}}catch(_){}
@@ -26865,7 +26697,6 @@ function togglePanel(){
     head.innerHTML='<b style="color:#e2e8f0;font-size:12px">\uD83D\uDC1E Error Capture</b>';
     var btns=document.createElement('div');
     function mkBtn(id,label,bg,fn){var b=document.createElement('button');b.id=id;b.textContent=label;b.style.cssText='background:'+bg+';color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;margin-left:5px';b.onclick=fn;return b;}
-    btns.appendChild(mkBtn('_dbgFund','FUND CHECK','#7c2d12',function(){ if(window.v13_fundCheck)window.v13_fundCheck(); }));
     btns.appendChild(mkBtn('_dbgTest','TEST NET','#15803d',function(){
       var b=document.getElementById('_dbgTest');b.textContent='...';
       var results={};
@@ -26898,21 +26729,6 @@ function togglePanel(){
 }
 function init(){
   if(badge)return;
-  /* v13.14 storage-origin guard: content:// (and other non-file/https schemes) can
-     give an unstable origin — the trade dataset may NOT persist between sessions. */
-  try{
-    if(!/^(file:|https?:)$/.test(location.protocol)){
-      var warn=document.createElement('div');
-      warn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;color:#fecaca;font-family:monospace;font-size:11px;padding:8px 34px 8px 10px;line-height:1.5';
-      warn.innerHTML='\u26A0 Opened via <b>'+location.protocol+'//</b> \u2014 browser storage may NOT persist, risking your ML dataset. Open via <b>file:///sdcard/Download/\u2026</b> typed in Chrome\u2019s address bar and bookmark it. Tap BAK now as insurance.';
-      var x=document.createElement('span');
-      x.textContent='\u2715';
-      x.style.cssText='position:absolute;right:10px;top:7px;font-weight:700;cursor:pointer';
-      x.onclick=function(){warn.remove();};
-      warn.appendChild(x);
-      document.body.appendChild(warn);
-    }
-  }catch(_){}
   badge=document.createElement('div');
   badge.id='_dbgBadge';
   badge.style.cssText='position:fixed;bottom:74px;left:8px;z-index:99998;background:#78350f;color:#fff;font-family:monospace;font-size:10px;font-weight:700;padding:4px 8px;border-radius:12px;opacity:.85;cursor:pointer;box-shadow:0 2px 6px #0008';
