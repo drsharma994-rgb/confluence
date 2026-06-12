@@ -2761,7 +2761,7 @@ const PROXIES=['','https://api.allorigins.win/get?url='];
 let proxyIdx=0,baseIdx=0;
 
 async function getJSON(url,attempt=0){
-  if(attempt>2)throw new Error('Max retries');
+  if(attempt>1)throw new Error('Max retries'); // max 2 attempts: direct + one proxy
   const px=PROXIES[proxyIdx%PROXIES.length];
   const full=px?px+encodeURIComponent(url):url;
   try{
@@ -2903,7 +2903,7 @@ async function fetchFundingHistory(symbol){
   }catch(e){return[];}
 }
 
-let _takerDead=0; // v13.14: /v2/trades appears not to exist publicly — stop after 3 fails
+let _takerDead=1; // v2/trades removed from Delta India API — disabled at startup
 async function fetchTakerRatio(symbol){
   // Delta Exchange trades endpoint — get last 100 trades, compute buy vs sell
   try{
@@ -26481,7 +26481,7 @@ setTimeout(function(){try{injectHonestBadges();}catch(e){}},3000);
 (function(){ 'use strict';
 
 /* ── BINANCE LAYER ─────────────────────────────────────────────────────── */
-var BX = { cache:{}, dead:0 };
+var BX = { cache:{}, dead:1 }; // fapi.binance.com + api.binance.com geo-blocked in India
 function bx_sym(base){ return String(base||'').toUpperCase().replace(/USDT?$/,'').replace(/[^A-Z0-9]/g,'') + 'USDT'; }
 
 async function bx_fetch(base){
@@ -26493,7 +26493,7 @@ async function bx_fetch(base){
     var pr = await Promise.all([
       fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'&interval=1h&limit=25',{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+      Promise.resolve(null) // api.binance.com geo-blocked in India — removed
     ]);
     var kl=pr[0], pi=pr[1], sp=pr[2];
     if(!kl || !Array.isArray(kl) || kl.length < 10){
@@ -26914,11 +26914,12 @@ window.addEventListener('unhandledrejection',function(e){
 var _f=window.fetch.bind(window);
 window.fetch=function(u,o){
   var url=typeof u==='string'?u:(u&&u.url)||'?';
+  var _isSuppressed=/localhost|127\.0\.0\.1|fapi\.binance\.com|api\.binance\.com|allorigins\.win/.test(String(url));
   return _f.apply(this,arguments).then(function(r){
-    if(r&&!r.ok&&r.status>=400)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
+    if(r&&!r.ok&&r.status>=400&&!_isSuppressed)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
     return r;
   }).catch(function(err){
-    add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
+    if(!_isSuppressed)add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
     throw err;
   });
 };
