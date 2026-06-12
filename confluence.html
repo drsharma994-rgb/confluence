@@ -1239,7 +1239,7 @@ audio{display:none}
     <div class="hstat"><div class="lbl">Coins Loaded</div><div class="val" id="coinCount" style="color:var(--green)">30</div></div>
     <div class="hstat"><div class="lbl">UTC</div><div class="val" id="clock">--:--:--</div></div>
     <div class="hstat"><div class="lbl">Re-scan</div><div class="val" style="color:var(--accent)" id="countdown">—</div></div>
-    <div class="hstat"><div class="lbl">Feed</div><div class="status"><span class="dot" id="statusDot"></span><span id="statusTxt">⚖️ Basis Alert: H 67181.62%</span></div></div>
+    <div class="hstat"><div class="lbl">Feed</div><div class="status"><span class="dot" id="statusDot"></span><span id="statusTxt">Ready</span></div></div>
     <button class="hbtn sound-btn on" id="soundBtn" onclick="toggleSound()" title="Sound alerts">🔊</button>
     <button class="hbtn" id="darkBtn" onclick="toggleDark()" title="Dark mode">🌙</button>
     <button class="hbtn" id="pushBtn" title="Browser push alerts" style="font-size:10px">🔔 Push</button>
@@ -1294,7 +1294,7 @@ audio{display:none}
 <!-- SESSION BAR -->
 <div class="session-bar">
   <span id="sessionTag" class="session-tag london" title="11:30 PM–1 AM IST · Watch for reversals · Mean-reversion setups" style="color: rgb(245, 158, 11);">NY CLOSE</span>
-  <span id="sessionNote" style="flex:1">NY-London overlap end — watch for reversals. Good for mean-reversion setups.</span>
+  <span id="sessionNote" style="flex:1">NY-London overlap end — watch for reversals. Mean-reversion is a common heuristic here — not validated.</span>
   <span class="sq-dot off" id="sqDot"></span>
   <span id="sqTxt" style="font-size:10px">checking squeeze…</span>
 </div>
@@ -1405,7 +1405,7 @@ audio{display:none}
     <div class="ctl"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fullAlignOnly" style="accent-color:var(--accent)"> 4/4 Align only</label></div>
     <div class="ctl"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="favOnly" style="accent-color:var(--accent)"> Watchlist only</label></div>
     <button class="btn export-btn" onclick="exportCSV()">⬇ CSV</button>
-    <div class="scanline" id="scanline">⚖️ Basis Alert: H 67181.62%</div>
+    <div class="scanline" id="scanline">Initialising…</div>
   </div>
   <div id="coin-panel-wrap" class="open">
     <div class="panel-header">
@@ -1761,7 +1761,7 @@ audio{display:none}
    10. Browser push notification support
 ============================================================ */
 
-const BASES=["https://api.india.delta.exchange"]; // api.delta.exchange removed — times out from India
+const BASES=["https://api.india.delta.exchange","https://api.delta.exchange"];
 const FNG_URL="https://api.alternative.me/fng/?limit=1";
 const API=((new URLSearchParams(location.search)).get('api')||"").replace(/\/+$/,"");
 const FULL_EVERY=150,PRICE_EVERY=25,NFACT=12; // OI excluded (data flat)
@@ -2241,7 +2241,7 @@ function fundingMomentum(fhArr){
   return{flip,direction,streak,extreme,recentAvg,olderAvg};
 }
 function oiPriceDivergence(oiChgPct,dir,priceChg){if(oiChgPct==null)return null;if(oiChgPct>3&&priceChg<-0.5)return'OI↑ PRICE↓ → SHORT';if(oiChgPct<-3&&priceChg>0.5)return'OI↓ PRICE↑ → WEAK';if(oiChgPct>3&&priceChg>0.5)return'OI↑ PRICE↑ → CONFIRM';return null;}
-function getSession(){const h=new Date().getUTCHours(),m=new Date().getUTCMinutes(),t=h+m/60;if(t>=23||t<3)return{name:'DEAD ZONE',cls:'dead',weight:0.4,note:'Low volume — avoid chasing. Wait for Asia open 03:00 UTC.'};if(t>=3&&t<8)return{name:'ASIA',cls:'asia',weight:0.7,note:'Asia session — BTC leads, altcoins follow. Trend continuation setups work best.'};if(t>=8&&t<12)return{name:'LONDON',cls:'london',weight:0.85,note:'London open — high volatility, fakeouts common. Wait for candle close before entry.'};if(t>=12&&t<18)return{name:'NY',cls:'ny',weight:1.0,note:'NY session — highest liquidity. Breakout setups most reliable here.'};return{name:'NY CLOSE',cls:'london',weight:0.75,note:'NY-London overlap end — watch for reversals. Good for mean-reversion setups.'};}
+function getSession(){const h=new Date().getUTCHours(),m=new Date().getUTCMinutes(),t=h+m/60;if(t>=23||t<3)return{name:'DEAD ZONE',cls:'dead',weight:0.4,note:'Low volume — avoid chasing. Wait for Asia open 03:00 UTC.'};if(t>=3&&t<8)return{name:'ASIA',cls:'asia',weight:0.7,note:'Asia session — BTC leads, altcoins follow. Continuation bias is a common heuristic — not validated here.'};if(t>=8&&t<12)return{name:'LONDON',cls:'london',weight:0.85,note:'London open — high volatility, fakeouts common. Wait for candle close before entry.'};if(t>=12&&t<18)return{name:'NY',cls:'ny',weight:1.0,note:'NY session — highest liquidity. Breakouts are often favored here — heuristic, not validated.'};return{name:'NY CLOSE',cls:'london',weight:0.75,note:'NY-London overlap end — watch for reversals. Mean-reversion is a common heuristic here — not validated.'};}
 function btcCorrelation(closes,btcCloses){if(!btcCloses||btcCloses.length<20)return null;const n=Math.min(closes.length,btcCloses.length,48);const c1=closes.slice(-n),c2=btcCloses.slice(-n);const r1=c1.map((_,i)=>i>0?(c1[i]-c1[i-1])/c1[i-1]:0).slice(1);const r2=c2.map((_,i)=>i>0?(c2[i]-c2[i-1])/c2[i-1]:0).slice(1);const m1=avg(r1),m2=avg(r2);let cov=0,s1=0,s2=0;r1.forEach((_,i)=>{cov+=(r1[i]-m1)*(r2[i]-m2);s1+=(r1[i]-m1)**2;s2+=(r2[i]-m2)**2;});const corr=Math.sqrt(s1*s2)>0?cov/Math.sqrt(s1*s2):0;return Math.round(corr*100);}
 function calcPremium(closes,markPrice){const avg7d=avg(closes.slice(-168));if(!avg7d)return null;return(markPrice-avg7d)/avg7d*100;}
 function volRegime(atrHistory){if(!atrHistory||atrHistory.length<10)return{regime:'normal',pct:50};const vals=atrHistory.filter(x=>x!=null&&isFinite(x));if(vals.length<5)return{regime:'normal',pct:50};const cur=vals[vals.length-1];const sorted=[...vals].sort((a,b)=>a-b);const rank=sorted.filter(x=>x<=cur).length;const pct=Math.round(rank/sorted.length*100);const regime=pct>=75?'high':pct<=25?'low':'normal';return{regime,pct};}
@@ -2532,7 +2532,11 @@ function analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,fng,takerData){
   // v13.13 FIX: fetchFundingHistory already returns numbers scaled ×100 (percent).
   // The old map multiplied by 100 AGAIN → fhArr was 100× too large vs fRate,
   // which made fundingMomentum.extreme (>0.1%) fire on virtually any funding.
-  const fhArr=Array.isArray(fhist)?fhist.map(x=>typeof x==='number'?x:+(x.funding_rate??0)*100):[];
+  let fhArr=Array.isArray(fhist)?fhist.map(x=>typeof x==='number'?x:+(x.funding_rate??0)*100):[];
+  // v13.14: apply unit calibration discovered by the FUND CHECK self-test (🐞 panel).
+  // Guarantees ticker funding and history funding share one scale so the percentile is valid.
+  const _fcal=+(function(){try{return localStorage.getItem('v13_fund_cal')||1;}catch(_){return 1;}})();
+  if(_fcal!==1&&isFinite(_fcal)&&_fcal>0) fhArr=fhArr.map(x=>x*_fcal);
   const fBias=fundingHistoryBias(fhArr.slice(0,8)); // keep original 8-sample bias semantics
   const fundFlip=fhArr.length>=2&&Math.sign(fhArr[0])!==Math.sign(fhArr[1]);
   const fMomentum=fundingMomentum(fhArr);
@@ -2755,25 +2759,23 @@ const _atrFloorL=atrv>0?0.4*atrv:price*0.004;const _rawStopL=(inv<price&&inv>_at
 /* BASES/PROXIES defined above */
 const PROXIES=['','https://api.allorigins.win/get?url='];
 let proxyIdx=0,baseIdx=0;
-let _deltaFails=0; // consecutive total failures across direct+proxy
-const _DELTA_MAX_FAILS=2; // stop after 2 consecutive full-cycle failures
 
 async function getJSON(url,attempt=0){
-  if(attempt>1)throw new Error('Max retries'); // max 2 attempts: direct + one proxy
+  if(attempt>2)throw new Error('Max retries');
   const px=PROXIES[proxyIdx%PROXIES.length];
   const full=px?px+encodeURIComponent(url):url;
   try{
-    const r=await fetch(full,{signal:AbortSignal.timeout(5000)});
+    const r=await fetch(full,{signal:AbortSignal.timeout(4000)});
     if(!r.ok)throw new Error(r.status);
     const raw=await r.json();
     // allorigins /get wraps response in {contents: "...", status:{...}}
     if(px&&typeof raw==='object'&&raw.contents!==undefined){
-      try{_deltaFails=0;return JSON.parse(raw.contents);}catch(e2){throw new Error('proxy parse error');}
+      try{return JSON.parse(raw.contents);}catch(e2){throw new Error('proxy parse error');}
     }
-    _deltaFails=0; return raw;
+    return raw;
   }catch(e){
     proxyIdx++;
-    await new Promise(r=>setTimeout(r,300));
+    await new Promise(r=>setTimeout(r,400));
     return getJSON(url,attempt+1);
   }
 }
@@ -2882,29 +2884,50 @@ async function fetchOrderBook(symbol){
 }
 
 async function fetchFundingHistory(symbol){
-  // /v2/funding_history endpoint removed from Delta India API (returns 404).
-  // The current funding_rate is already present in the bulk tickers fetch.
-  // Return empty — analyzeFull reads fRate directly from the ticker object.
-  return [];
+  try{
+    /* Use direct fetch only — avoid proxy for this endpoint */
+    const base=BASES[baseIdx%BASES.length];
+    const r=await fetch(base+'/v2/funding_history?symbol='+symbol+'&page_size=90',
+      {signal:AbortSignal.timeout(5000)});
+    if(!r.ok)return[];
+    const d=await r.json();
+    return (d?.result||[]).map(r=>+(r.funding_rate||0)*100);
+  }catch(e){return[];}
 }
 
 async function fetchTakerRatio(symbol){
-  // /v2/trades endpoint removed from Delta India API (returns 404).
-  // Return neutral defaults — taker flow indicator will show N/A.
-  return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
+  // Delta Exchange trades endpoint — get last 100 trades, compute buy vs sell
+  try{
+    const base=BASES[baseIdx%BASES.length];
+    const r=await fetch(base+'/v2/trades?symbol='+symbol+'&limit=100',
+      {signal:AbortSignal.timeout(5000)});
+    if(!r.ok)return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
+    const d=await r.json();
+    const trades=d?.result||[];
+    let buyVol=0,sellVol=0;
+    trades.forEach(t=>{
+      const sz=+(t.size||t.quantity||0);
+      // buyer_role: 'buy' means buyer was taker (aggressive buy)
+      if(t.buyer_role==='buy'||t.side==='buy')buyVol+=sz;
+      else sellVol+=sz;
+    });
+    const total=buyVol+sellVol||1;
+    const buyPct=buyVol/total*100;
+    const ratio=buyVol/(sellVol||1);
+    const takerDir=buyPct>60?'long':buyPct<40?'short':'neutral';
+    return{buyPct,sellPct:100-buyPct,ratio,takerDir,buyVol,sellVol};
+  }catch(e){return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};}
 }
 
-let _cgDead=false; // CoinGecko geo-blocked/rate-limited — disable after first failure
 async function fetchSpotPrice(base){
-  if(_cgDead)return null;
+  // CoinGecko free API — no key needed
   try{
-    const _cgMap={'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'};
-    const id=_cgMap[base]; if(!id)return null; // skip unknown coins — no CoinGecko lookup
-    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd',{signal:AbortSignal.timeout(4000)});
-    if(!r.ok){_cgDead=true;return null;}
+    const id=({'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'}[base])||base.toLowerCase();
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd',{signal:AbortSignal.timeout(5000)});
+    if(!r.ok)return null;
     const d=await r.json();
     return d[id]?.usd||null;
-  }catch(e){_cgDead=true;return null;}
+  }catch(e){return null;}
 }
 
 function fundingSecondsLeft(){
@@ -2974,16 +2997,11 @@ async function buildUniverse(tickers){
         fetchCandles(sym.symbol,'4h',120),
         fetchCandles(sym.symbol,'1d',30),
         fetchOrderBook(sym.symbol),
-        Promise.resolve(_getFundHistory(sym.symbol)), // localStorage cache — no API call needed
+        fetchFundingHistory(sym.symbol),
         fetchTakerRatio(sym.symbol),
       ]);
       const a=analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,S.fng,takerData);
-      if(a){
-        // Append this scan's live fRate to persistent history
-        const _liveRate=+(tk.funding_rate??0)*100;
-        if(isFinite(_liveRate)) _appendFundRate(sym.symbol, _liveRate);
-        _partialResults.push(a); S.universe=_partialResults.slice(); return a;
-      }
+      if(a){ _partialResults.push(a); S.universe=_partialResults.slice(); return a; }
     }catch(e){console.error('[v13.12 analyzeFull]',sym?.symbol,e?.message||String(e));return null;}
     return null;
   });
@@ -2991,7 +3009,6 @@ async function buildUniverse(tickers){
   S.universe=results.filter(Boolean);
   // ── Stage 1: Cross-sectional percentile ranking ──────────────────────────
   try { _computeCrossSectionalRank(S.universe); } catch(_re){ console.warn('[xrank]', _re); }
-  _saveFundStore(); // Persist funding history to localStorage after each full scan
   S.lastFull=Date.now();
 }
 
@@ -3150,37 +3167,6 @@ const _oiStore={}; // sym -> last known OI for cross-scan diff
 function _saveOIStore(){
   try{localStorage.setItem('cfx_oi_store',JSON.stringify(Object.assign({},_oiStore,{_ts:Date.now()})));}catch(_){}
 }
-
-// ── FUNDING HISTORY CACHE ────────────────────────────────────────────────────
-// /v2/funding_history removed from Delta India API. We rebuild history by
-// appending each scan's live fRate to localStorage. Max 90 samples (~30 days
-// of 8-hour funding). This restores fundFlip, CROWDED badges, percentiles.
-const _fundStore = {}; // sym -> [rate0(newest), rate1, ...rate89]
-(function(){
-  try{
-    const _d = JSON.parse(localStorage.getItem('cfx_fund_store')||'{}');
-    // No staleness guard — funding history is cumulative, keep indefinitely
-    Object.keys(_d).forEach(k=>{ if(k!=='_ts'&&Array.isArray(_d[k])) _fundStore[k]=_d[k]; });
-  }catch(_){}
-})();
-function _saveFundStore(){
-  try{
-    const payload = Object.assign({},_fundStore,{_ts:Date.now()});
-    localStorage.setItem('cfx_fund_store', JSON.stringify(payload));
-  }catch(_){}
-}
-function _appendFundRate(sym, rate){
-  // rate must be in percent (already ×100)
-  if(!isFinite(rate)) return;
-  if(!_fundStore[sym]) _fundStore[sym]=[];
-  // Prepend newest rate, keep max 90 samples
-  _fundStore[sym].unshift(rate);
-  if(_fundStore[sym].length > 90) _fundStore[sym].length = 90;
-}
-function _getFundHistory(sym){
-  return _fundStore[sym] || [];
-}
-
 const _fundVelState={}; // sym -> {lastRate, lastTs, alertedAt}
 const _cvdFlipState={}; // sym -> {lastDir, alertedAt}
 const _liqCascadeState={lastBTCOI:0,lastBTCFund:0,ts:0,alertedAt:0};
@@ -3870,6 +3856,9 @@ async function scanPerpBasis(){
       if(!spotPrice||!a.price)continue;
       const perpPrice=a.price;
       const basisPct=(perpPrice-spotPrice)/spotPrice*100;
+      // v13.14 guard: |basis| > 5% means the spot API matched a DIFFERENT asset
+      // (short symbols like 'H' collide) — not a real basis. Skip, never alert.
+      if(Math.abs(basisPct)>5){ _basisState[sym].lastBasis=0; continue; }
       const prevBasis=_basisState[sym].lastBasis||0;
       _basisState[sym].lastBasis=basisPct;
       // Extreme basis: > 0.5% or < -0.5%
@@ -6663,7 +6652,7 @@ function renderCoinDetail(a){
         <div style="background:${_vBg};border:1px solid ${_vColor}55;border-radius:8px;padding:7px 10px;margin-bottom:9px;font-family:var(--mono);font-size:10px;font-weight:800;color:${_vColor};line-height:1.5">${_verdict}</div>
         <!-- Confidence bar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-family:var(--mono);font-size:9px;color:#94a3b8;letter-spacing:1px">CONFIDENCE</span>
+          <span style="font-family:var(--mono);font-size:9px;color:#94a3b8;letter-spacing:1px">CONFIDENCE (heuristic)</span>
           <span style="font-weight:900;font-size:14px;color:${confColor}">${entry.confidence}% ${entry.confLabel}</span>
         </div>
         <div style="background:#1e293b;border-radius:4px;height:5px;margin-bottom:10px;overflow:hidden">
@@ -6675,11 +6664,12 @@ function renderCoinDetail(a){
           <div style="font-family:var(--mono);font-size:14px;font-weight:900;color:#ffffff;letter-spacing:.5px">${fp2(entry.entryZoneLow)} – ${fp2(entry.entryZoneHigh)}</div>
           <div style="font-family:var(--mono);font-size:10px;color:#94a3b8;margin-top:3px">Ideal: <b style="color:#fbbf24">${fp2(entry.entryPrice)}</b> · ${entry.entryType}</div>
         </div>
-        <!-- Stop -->
+        <!-- Stop: plan stop is CANONICAL (one source of truth); engine alt shown only if divergent -->
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <div style="flex:1;background:#ef444411;border:1px solid #ef444444;border-radius:7px;padding:6px 8px;text-align:center">
-            <div style="font-family:var(--mono);font-size:8px;color:#ef4444;letter-spacing:1px">STOP LOSS</div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#ef4444">${fp2(entry.stopLoss)}</div>
+            <div style="font-family:var(--mono);font-size:8px;color:#ef4444;letter-spacing:1px">${(a.plan&&(a.plan.stop||a.plan.sl))?'STOP (PLAN)':'STOP LOSS'}</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#ef4444">${fp2((a.plan&&(a.plan.stop||a.plan.sl))||entry.stopLoss)}</div>
+            ${(function(){var ps=a.plan&&(a.plan.stop||a.plan.sl);if(ps&&entry.stopLoss&&Math.abs(entry.stopLoss-ps)/ps>0.003)return '<div style="font-family:var(--mono);font-size:8px;color:#94a3b8;margin-top:2px">engine alt: '+fp2(entry.stopLoss)+'</div>';return '';})()}
           </div>
           <div style="flex:1;background:#22c55e11;border:1px solid #22c55e44;border-radius:7px;padding:6px 8px;text-align:center">
             <div style="font-family:var(--mono);font-size:8px;color:#22c55e;letter-spacing:1px">TOP SIGNAL</div>
@@ -8386,18 +8376,51 @@ async function fetchJson(url){
   return r.json();
 }
 
-// fetchGoldSpot at line 8371 removed — canonical version lives at line 11250 (used by Gold tab)
+async function fetchGoldSpot(){
+  // Source 1: gold-api.com (confirmed working from India, CORS open)
+  const goldApiUrl='https://api.gold-api.com/price/XAU';
+  const proxies=['','https://api.allorigins.win/get?url='];
+  for(const px of proxies){
+    try{
+      const url=px?px+encodeURIComponent(goldApiUrl):goldApiUrl;
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      const raw=await r.json();
+      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
+      const p=parseFloat(d.price||d.Price||d.bid||0);
+      if(p>1000) return p;
+    }catch(e){ console.warn('fetchGoldSpot gold-api ('+(px||'direct')+'):',e.message); }
+  }
+  // Source 2: OKX PAXG-USDT (open CORS, works from India)
+  const okxUrl='https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT';
+  for(const px of proxies){
+    try{
+      const url=px?px+encodeURIComponent(okxUrl):okxUrl;
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      const raw=await r.json();
+      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
+      const p=parseFloat(d?.data?.[0]?.last||0);
+      if(p>1000) return p;
+    }catch(e){ console.warn('fetchGoldSpot OKX ('+(px||'direct')+'):',e.message); }
+  }
+  return 0;
+}
 
 async function fetchPaxgCandles(interval,limit){
-  // SOURCE 1: Binance Vision XAUT/USDT (open CORS *, works on Indian mobile)
-  const bnMap={'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1h','4h':'4h','1d':'1d'};
-  const bnInterval=bnMap[interval]||'5m';
-  const bnUrl=`https://data-api.binance.vision/api/v3/klines?symbol=XAUTUSDT&interval=${bnInterval}&limit=${Math.min(limit,1000)}`;
+  // SOURCE 1: CryptoCompare — ACAO:* (works from file:// on Android Chrome)
+  const ccAggrMap={'1m':1,'3m':3,'5m':5,'15m':15,'30m':30,'1h':60,'4h':240};
+  const ccAggr=ccAggrMap[interval]||5;
   try{
-    const r=await fetch(bnUrl,{signal:AbortSignal.timeout(10000)});
-    const arr=await r.json();
-    if(Array.isArray(arr)&&arr.length>1) return arr.map(k=>[+k[0],k[1],k[2],k[3],k[4],k[5],'0','0','0','0','0','0']);
-  }catch(e){console.warn('fetchPaxgCandles Binance:',e.message);}
+    const ccUrl=ccAggr>=60
+      ?`https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=${Math.round(ccAggr/60)}`
+      :`https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=${ccAggr}`;
+    const r=await fetch(ccUrl,{signal:AbortSignal.timeout(10000)});
+    const d=await r.json();
+    const arr=d?.Data?.Data||[];
+    if(arr.length>1){
+      // Convert to Binance-like format: [ts_ms, open, high, low, close, vol, ...]
+      return arr.map(k=>[k.time*1000,String(k.open),String(k.high),String(k.low),String(k.close),String(k.volumefrom),'0','0','0','0','0','0']);
+    }
+  }catch(e){console.warn('fetchPaxgCandles CryptoCompare:',e.message);}
 
   // SOURCE 2: OKX direct
   const okxMap={'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1H','4h':'4H','1d':'1D'};
@@ -11233,27 +11256,31 @@ const GOLD_SYM  = 'PAXGUSDT';
 GOLD.priceFactor = 1; // will be set after fetching both prices
 
 async function fetchGoldSpot() {
-  // Source 1: gold-api.com (open CORS *, confirmed from India)
-  try{
-    const r=await fetch('https://api.gold-api.com/price/XAU',{signal:AbortSignal.timeout(8000)});
-    const d=await r.json();
-    const p=parseFloat(d.price||d.Price||0);
-    if(p>1000) return p;
-  }catch(e){}
-  // Source 2: Binance Vision XAUT/USDT ticker (open CORS *, no geo-block)
-  try{
-    const r=await fetch('https://data-api.binance.vision/api/v3/ticker/price?symbol=XAUTUSDT',{signal:AbortSignal.timeout(8000)});
-    const d=await r.json();
-    const p=parseFloat(d.price||0);
-    if(p>1000) return p;
-  }catch(e){}
-  // Source 3: OKX PAXG-USDT
-  try{
-    const r=await fetch('https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT',{signal:AbortSignal.timeout(8000)});
-    const d=await r.json();
-    const p=parseFloat(d?.data?.[0]?.last||0);
-    if(p>1000) return p;
-  }catch(e){}
+  const proxies=['','https://api.allorigins.win/get?url='];
+  // Source 1: gold-api.com (open CORS, confirmed from India)
+  const goldApiUrl='https://api.gold-api.com/price/XAU';
+  for(const px of proxies){
+    try{
+      const url=px?px+encodeURIComponent(goldApiUrl):goldApiUrl;
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      const raw=await r.json();
+      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
+      const p=parseFloat(d.price||d.Price||0);
+      if(p>1000) return p;
+    }catch(e){}
+  }
+  // Source 2: OKX PAXG-USDT (open CORS, works from India)
+  const okxUrl='https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT';
+  for(const px of proxies){
+    try{
+      const url=px?px+encodeURIComponent(okxUrl):okxUrl;
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      const raw=await r.json();
+      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
+      const p=parseFloat(d?.data?.[0]?.last||0);
+      if(p>1000) return p;
+    }catch(e){}
+  }
   return 0;
 }
 
@@ -11261,29 +11288,45 @@ async function fetchGoldCandles(res, limitOrRange) {
   const countMap = {'1h': 200, '4h': 180, '1d': 180};
   const limit = typeof limitOrRange === 'number' ? limitOrRange : (countMap[res] || 200);
 
-  // SOURCE 1: Binance Vision — XAUT/USDT (open CORS *, no geo-block, works on Indian mobile)
-  // XAUT tracks real gold spot within $5-15. Prices scaled to spot via priceFactor.
-  const bnMap = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1h','4h':'4h','1d':'1d','1w':'1w'};
-  const bnInterval = bnMap[res] || '4h';
-  const bnUrl = `https://data-api.binance.vision/api/v3/klines?symbol=XAUTUSDT&interval=${bnInterval}&limit=${Math.min(limit,1000)}`;
+  // SOURCE 1: CryptoCompare — ACAO:* (works from file:// on Android Chrome)
   try {
-    const r = await fetch(bnUrl, {signal: AbortSignal.timeout(12000)});
-    const arr = await r.json();
-    if (Array.isArray(arr) && arr.length > 1) {
-      return arr.map(k => ({t:+k[0],o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),v:parseFloat(k[5])}));
+    let ccUrl;
+    if (res === '1d') {
+      ccUrl = `https://min-api.cryptocompare.com/data/v2/histoday?fsym=PAXG&tsym=USD&limit=${limit}`;
+    } else if (res === '4h') {
+      ccUrl = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=4`;
+    } else if (res === '1h') {
+      ccUrl = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}`;
+    } else if (res === '30m') {
+      ccUrl = `https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=30`;
+    } else if (res === '15m') {
+      ccUrl = `https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=15`;
+    } else if (res === '5m') {
+      ccUrl = `https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=5`;
+    } else {
+      ccUrl = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=PAXG&tsym=USD&limit=${limit}&aggregate=4`;
     }
-  } catch(e) { console.warn('fetchGoldCandles Binance:', e.message); }
+    const r = await fetch(ccUrl, {signal: AbortSignal.timeout(10000)});
+    const d = await r.json();
+    const arr = d?.Data?.Data || [];
+    if (arr.length > 1) {
+      return arr.map(k => ({
+        t: k.time * 1000,
+        o: k.open, h: k.high, l: k.low, c: k.close, v: k.volumefrom
+      }));
+    }
+  } catch(e) { console.warn('fetchGoldCandles CryptoCompare:', e.message); }
 
-  // SOURCE 2: OKX PAXG-USDT direct
+  // SOURCE 2: OKX direct (works from pplx.app, may fail from file://)
   const okxMap = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1H','4h':'4H','1d':'1D','1w':'1W'};
   const okxBar = okxMap[res] || '4H';
   const okxUrl = `https://www.okx.com/api/v5/market/candles?instId=PAXG-USDT&bar=${okxBar}&limit=${Math.min(limit,300)}`;
   try {
-    const r = await fetch(okxUrl, {signal: AbortSignal.timeout(12000)});
+    const r = await fetch(okxUrl, {signal: AbortSignal.timeout(10000)});
     const d = await r.json();
     const arr = d.data || [];
     if (arr.length) return arr.slice().reverse().map(k => ({t:+k[0],o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),v:parseFloat(k[5])}));
-  } catch(e) { console.warn('fetchGoldCandles OKX:', e.message); }
+  } catch(e) { console.warn('fetchGoldCandles OKX direct:', e.message); }
 
   // SOURCE 3: allorigins proxy for OKX
   try {
@@ -11339,14 +11382,42 @@ async function fetchGoldMacro() {
     }
   } catch(e) { GOLD.dxy = GOLD.dxy || 104; }
 
-  // ── US10Y + SPX + VIX + Oil ──
-  // Yahoo Finance is blocked in India. Use static fallbacks — values update if cached from previous run.
-  // These are macro context only and do not affect entry/stop/target calculations.
-  if (!GOLD.us10y) GOLD.us10y = 4.5;
+  // ── US10Y + SPX + VIX via Yahoo Finance (CORS varies) ──
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
+    const d = await r.json();
+    const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (v) GOLD.us10y = v;
+  } catch(e) { GOLD.us10y = GOLD.us10y || 4.5; }
+  // Real Yield proxy: US10Y - 2.3% (avg 10Y breakeven inflation in 2026)
   GOLD.realYield = GOLD.us10y - 2.3;
-  if (!GOLD.spx)   { GOLD.spx = 5500; GOLD.spxPrev = 5500; }
-  if (!GOLD.vix)   GOLD.vix = 18;
-  if (!GOLD.oil)   { GOLD.oil = 75; GOLD.oilPrev = 75; }
+
+  // SPX
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
+    const d = await r.json();
+    const result = d?.chart?.result?.[0];
+    const price = result?.meta?.regularMarketPrice;
+    const prev = result?.meta?.chartPreviousClose;
+    if (price) { GOLD.spx = price; GOLD.spxPrev = prev || price; }
+  } catch(e) { GOLD.spx = GOLD.spx || 5000; GOLD.spxPrev = GOLD.spxPrev || 5000; }
+  // VIX
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
+    const d = await r.json();
+    const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (v) GOLD.vix = v;
+  } catch(e) { GOLD.vix = GOLD.vix || 18; }
+
+  // ── Oil (XTIUSD) — for Holy Trinity ──
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
+    const d = await r.json();
+    const result = d?.chart?.result?.[0];
+    const price = result?.meta?.regularMarketPrice;
+    const prev = result?.meta?.chartPreviousClose;
+    if (price) { GOLD.oil = price; GOLD.oilPrev = prev || price; }
+  } catch(e) { GOLD.oil = GOLD.oil || 75; GOLD.oilPrev = GOLD.oilPrev || 75; }
   // Silver price for Gold/Silver ratio
   try {
     const xagR = await fetch('https://api.gold-api.com/price/XAG',{signal:AbortSignal.timeout(5000)});
@@ -13631,11 +13702,12 @@ async function loadGoldData(force=false) {
   GOLD.loading=true;
   if(el) el.innerHTML='<div style="text-align:center;padding:40px;color:#f59e0b;">⏳ Loading XAUUSD data from markets...</div>';
   try {
-    // Sequential fetches — avoids OKX rate-limiting that breaks parallel calls on mobile
-    const c4h = await fetchGoldCandles('4h', 180);
-    const c1h = await fetchGoldCandles('1h', 100);
-    const c1d = await fetchGoldCandles('1d', 180);
-    const spotPrice = await fetchGoldSpot();
+    const [c1h, c4h, c1d, spotPrice] = await Promise.all([
+      fetchGoldCandles('1h', 100),  // 200 times out via proxy; 100 is safe
+      fetchGoldCandles('4h', 180),
+      fetchGoldCandles('1d', 180),
+      fetchGoldSpot()
+    ]);
     if(!c4h.length) throw new Error('No candle data returned. Please retry.');
     // Compute price correction factor: scale PAXG prices to real XAUUSD spot
     const paxgCurrent = c4h[c4h.length-1].c;
@@ -15009,7 +15081,7 @@ async function gsMultiFunding(spotPrice, c5m) {
     try {
       resp = await fetch('https://api.india.delta.exchange/v2/funding_rates?product_symbol=GOLDUSDM', { signal: AbortSignal.timeout(4000) });
     } catch(e1) {
-      resp = await fetch('https://api.india.delta.exchange/v2/funding_rates?product_symbol=GOLDUSDM', { signal: AbortSignal.timeout(4000) });
+      resp = await fetch('https://api.delta.exchange/v2/funding_rates?product_symbol=GOLDUSDM', { signal: AbortSignal.timeout(4000) });
     }
     const data = await resp.json();
     const rate = parseFloat(data?.result?.[0]?.funding_rate || data?.result?.funding_rate || 0);
@@ -16210,7 +16282,7 @@ const CA = {
 // CONSTANTS
 // ---------------------------------------------------------------------------
 const CA_BASE_PRIMARY   = 'https://api.india.delta.exchange/v2';
-const CA_BASE_FALLBACK  = 'https://api.india.delta.exchange/v2'; // global endpoint removed — times out from India
+const CA_BASE_FALLBACK  = 'https://api.delta.exchange/v2';
 const CA_SCAN_INTERVAL  = 300000; // 5 minutes
 const CA_FETCH_TIMEOUT  = 5000;
 const CA_MAX_COINS      = 20;
@@ -21893,11 +21965,11 @@ function _stRenderResults(con, results){
   html+=`<div style="background:var(--accent-bg);border:1px solid var(--accent);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-family:var(--mono)">
     <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px">🌍 World's Best Strategies Active</div>
     <div style="font-size:9.5px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:2px">
-      <span>📈 Adaptive Trend — Sharpe 2.41, 40% annual</span>
-      <span>💰 Funding Arb — Sharpe 5–10, ~16% APY</span>
+      <span>📈 Adaptive Trend — 2025 paper backtest claim; NOT validated here</span>
+      <span>💰 Funding Arb — paper claim; carry returns turned NEGATIVE in 2025</span>
       <span>🚨 Liquidation Cascade — OI+Funding heatmap</span>
-      <span>📊 10-Day Breakout — Beats B&H</span>
-      <span>⚡ Dynamic Grid — 60–70% IRR on ETH</span>
+      <span>📊 10-Day Breakout — historical backtest only; edge decays</span>
+      <span>⚡ Dynamic Grid — cherry-picked period claim; unvalidated</span>
       <span>🥇 Gold XAUUSD — Live overlay</span>
     </div>
   </div>`;
@@ -26330,24 +26402,25 @@ setTimeout(function(){try{injectHonestBadges();}catch(e){}},3000);
 (function(){ 'use strict';
 
 /* ── BINANCE LAYER ─────────────────────────────────────────────────────── */
-var BX = { cache:{}, dead:1 }; // fapi.binance.com geo-blocked in India — layer disabled at startup
+var BX = { cache:{}, dead:0 };
 function bx_sym(base){ return String(base||'').toUpperCase().replace(/USDT?$/,'').replace(/[^A-Z0-9]/g,'') + 'USDT'; }
 
 async function bx_fetch(base){
-  if(BX.dead >= 1) return null; // geo-blocked / offline — layer disabled (trips on first failure)
+  if(BX.dead >= 2) return null; // geo-blocked / offline — layer disabled
   var sym = bx_sym(base);
   var c = BX.cache[sym];
   if(c && Date.now()-c.ts < 300000) return c.ok ? c : null; // 5 min TTL
   try{
     var pr = await Promise.all([
       fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'&interval=1h&limit=25',{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+      fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
     ]);
-    var kl=pr[0], pi=pr[1];
+    var kl=pr[0], pi=pr[1], sp=pr[2];
     if(!kl || !Array.isArray(kl) || kl.length < 10){
       BX.cache[sym] = {ts:Date.now(), ok:false}; // symbol not on Binance — cache the miss
-      // both endpoints null before ANY session success → likely geo-block, trip breaker
-      if(!kl && !pi && !BX.everOk) BX.dead++;
+      // all three endpoints null before ANY session success → likely geo-block, trip breaker
+      if(!kl && !pi && !sp && !BX.everOk) BX.dead++;
       return null;
     }
     BX.dead = 0; BX.everOk = true;
@@ -26357,8 +26430,8 @@ async function bx_fetch(base){
     var ret6 = (closes[L-1]/closes[Math.max(0,L-7)]-1)*100;
     var mark = pi ? +pi.markPrice : null;
     var fr   = pi ? +pi.lastFundingRate*100 : null;
-    var spot = mark; // use markPrice as spot — api.binance.com is geo-blocked in India
-    var basis = null; // basis needs separate spot feed — unavailable, skip
+    var spot = sp ? +sp.price : null;
+    var basis = (mark && spot) ? (mark-spot)/spot*100 : null;
     var o = {ts:Date.now(), ok:true, sym:sym, ret1:ret1, ret6:ret6, funding:fr, basis:basis, mark:mark, spot:spot};
     BX.cache[sym] = o;
     return o;
@@ -26370,7 +26443,7 @@ async function bx_fetch(base){
 
 /* annotate BTC, ETH + top 8 ranked coins after each scan */
 async function bx_annotateTop(){
-  if(typeof S==='undefined' || !S.universe || !S.universe.length || BX.dead>=1) return;
+  if(typeof S==='undefined' || !S.universe || !S.universe.length || BX.dead>=2) return;
   var picks = [];
   // BTC/ETH first — they exist on Binance, so one success proves the layer is reachable
   S.universe.forEach(function(a){
@@ -26385,7 +26458,7 @@ async function bx_annotateTop(){
     var base = (a.coin && (a.coin.base || a.coin.symbol)) || '';
     var bx = await bx_fetch(base);
     if(bx){ a._bx = bx; touched=true; }
-    if(BX.dead>=1) break;
+    if(BX.dead>=2) break;
   }
   if(touched){
     try{
@@ -26450,9 +26523,10 @@ window.v13_entryGrade=function(a){
   return {grade:g, pts:pts, parts:parts};
 };
 
-function ds_snapshot(a){
+function ds_snapshot(a, gate){
   return {
     id:(a.coin&&a.coin.symbol)+'-'+a.dir+'-'+Math.floor(Date.now()/3600000),
+    gate:(gate===0?0:1),
     sym:(a.coin&&a.coin.symbol)||'?', dir:a.dir, ts:Date.now(), entry:a.price,
     atr:+a.atr||0,
     fa:a._familyAgreement||0,
@@ -26476,14 +26550,37 @@ function ds_snapshot(a){
 function ds_recordFromScan(){
   if(typeof S==='undefined' || !S.universe) return;
   var ds=ds_load(); var ids={}; ds.forEach(function(r){ids[r.id]=1;});
-  var n=0;
+  // v13.14 episode dedupe: a setup that persists for hours is ONE sample, not many.
+  // Skip if an unlabeled record for same sym+dir exists within the last 12h.
+  function inEpisode(sym,dir){
+    var cut=Date.now()-12*3600*1000;
+    for(var i=ds.length-1;i>=0;i--){
+      var r=ds[i];
+      if(r.ts<cut) break;
+      if(r.sym===sym && r.dir===dir && (r.label===null||r.label===undefined)) return true;
+    }
+    return false;
+  }
+  var n=0, rejects=[];
   S.universe.forEach(function(a){
-    var valid = (a._familyAgreement>=3) && a.plan && isFinite(a.plan.rr) && a.plan.rr>=2 && a.atr>0 && a.price>0;
-    if(!valid) return;
-    var r=ds_snapshot(a);
+    var sane = a && a.dir && a.atr>0 && a.price>0 && a.coin && a.coin.symbol;
+    if(!sane) return;
+    var valid = (a._familyAgreement>=3) && a.plan && isFinite(a.plan.rr) && a.plan.rr>=2;
+    if(!valid){ rejects.push(a); return; }
+    if(inEpisode(a.coin.symbol, a.dir)) return;
+    var r=ds_snapshot(a, 1);
     if(ids[r.id]) return;
     ds.push(r); ids[r.id]=1; n++;
   });
+  // v13.14 control group: one RANDOM gate-failing setup per scan, so training can
+  // learn whether the FA>=3 & RR>=2 gate itself adds value (counterfactual data).
+  if(rejects.length){
+    var c=rejects[Math.floor(Math.random()*rejects.length)];
+    if(!inEpisode(c.coin.symbol, c.dir)){
+      var cr=ds_snapshot(c, 0);
+      if(!ids[cr.id]){ ds.push(cr); ids[cr.id]=1; n++; }
+    }
+  }
   if(n){ ds_save(ds); bx_strip(); }
 }
 
@@ -26542,7 +26639,7 @@ async function ds_labelPending(maxN){
 
 function ds_csv(){
   var ds=ds_load();
-  var cols=['id','sym','dir','ts','entry','atr','fa','rr','str','rank','sq','sqDeep','cusum','fpctl','fext','oi','adx','rsi','bxAgree','eg','label','retH'];
+  var cols=['id','gate','sym','dir','ts','entry','atr','fa','rr','str','rank','sq','sqDeep','cusum','fpctl','fext','oi','adx','rsi','bxAgree','eg','label','retH'];
   var out=cols.join(',')+'\n';
   ds.forEach(function(r){
     out+=cols.map(function(c){var v=r[c];return (v===null||v===undefined)?'':String(v).replace(/,/g,';');}).join(',')+'\n';
@@ -26551,6 +26648,30 @@ function ds_csv(){
 }
 
 /* globals for buttons */
+window.v13_fundCheck=function(){
+  try{
+    if(typeof S==='undefined'||!S.universe||!S.universe.length){alert('Run a scan first.');return;}
+    var ratios=[];
+    S.universe.forEach(function(a){
+      var f=a.funding; if(!f||!f.history||f.history.length<10)return;
+      var cur=Math.abs(+f.current||0); if(!(cur>0))return;
+      var mags=f.history.map(function(x){return Math.abs(+x||0);}).filter(function(x){return x>0;}).sort(function(x,y){return x-y;});
+      if(mags.length<6)return;
+      var med=mags[Math.floor(mags.length/2)];
+      if(med>0)ratios.push(cur/med);
+    });
+    if(ratios.length<5){alert('FUND CHECK: not enough data ('+ratios.length+' coins). Try after a full scan.');return;}
+    ratios.sort(function(x,y){return x-y;});
+    var R=ratios[Math.floor(ratios.length/2)];
+    var verdict,cal=1;
+    if(R>=0.2&&R<=5){verdict='\u2705 Ticker and history funding share one scale (median ratio '+R.toFixed(2)+'). Percentile is valid. No change.';}
+    else if(R>30&&R<300){cal=100;verdict='\u26A0 History is ~100\u00d7 smaller than ticker (ratio '+R.toFixed(0)+'). Calibration \u00d7100 applied to history — takes effect next scan.';}
+    else if(R>1/300&&R<1/30){cal=0.01;verdict='\u26A0 History is ~100\u00d7 LARGER than ticker (ratio '+R.toFixed(4)+'). Calibration \u00f7100 applied — takes effect next scan.';}
+    else{verdict='\u2753 Ambiguous ratio '+R.toFixed(3)+' across '+ratios.length+' coins. No calibration applied — please also compare one coin against the Delta website and report back.';}
+    if(cal!==1){try{localStorage.setItem('v13_fund_cal',String(cal));}catch(_){}}
+    alert('FUND CHECK ('+ratios.length+' coins)\n\n'+verdict);
+  }catch(e){alert('FUND CHECK failed: '+e.message);}
+};
 window.v13_dsLabelNow=function(){
   ds_labelPending(30).then(function(n){
     try{var el=document.getElementById('bx-strip');if(el){bx_strip();}}catch(_){}
@@ -26659,13 +26780,11 @@ window.addEventListener('unhandledrejection',function(e){
 var _f=window.fetch.bind(window);
 window.fetch=function(u,o){
   var url=typeof u==='string'?u:(u&&u.url)||'?';
-  var _isLocal=/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(String(url));
-  var _isSuppressed=_isLocal||/fapi\.binance\.com|api\.binance\.com|allorigins\.win/.test(String(url));
   return _f.apply(this,arguments).then(function(r){
-    if(r&&!r.ok&&r.status>=400&&!_isSuppressed)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
+    if(r&&!r.ok&&r.status>=400)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
     return r;
   }).catch(function(err){
-    if(!_isSuppressed)add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
+    add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
     throw err;
   });
 };
@@ -26704,6 +26823,7 @@ function togglePanel(){
     head.innerHTML='<b style="color:#e2e8f0;font-size:12px">\uD83D\uDC1E Error Capture</b>';
     var btns=document.createElement('div');
     function mkBtn(id,label,bg,fn){var b=document.createElement('button');b.id=id;b.textContent=label;b.style.cssText='background:'+bg+';color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;margin-left:5px';b.onclick=fn;return b;}
+    btns.appendChild(mkBtn('_dbgFund','FUND CHECK','#7c2d12',function(){ if(window.v13_fundCheck)window.v13_fundCheck(); }));
     btns.appendChild(mkBtn('_dbgTest','TEST NET','#15803d',function(){
       var b=document.getElementById('_dbgTest');b.textContent='...';
       var results={};
@@ -26736,6 +26856,21 @@ function togglePanel(){
 }
 function init(){
   if(badge)return;
+  /* v13.14 storage-origin guard: content:// (and other non-file/https schemes) can
+     give an unstable origin — the trade dataset may NOT persist between sessions. */
+  try{
+    if(!/^(file:|https?:)$/.test(location.protocol)){
+      var warn=document.createElement('div');
+      warn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;color:#fecaca;font-family:monospace;font-size:11px;padding:8px 34px 8px 10px;line-height:1.5';
+      warn.innerHTML='\u26A0 Opened via <b>'+location.protocol+'//</b> \u2014 browser storage may NOT persist, risking your ML dataset. Open via <b>file:///sdcard/Download/\u2026</b> typed in Chrome\u2019s address bar and bookmark it. Tap BAK now as insurance.';
+      var x=document.createElement('span');
+      x.textContent='\u2715';
+      x.style.cssText='position:absolute;right:10px;top:7px;font-weight:700;cursor:pointer';
+      x.onclick=function(){warn.remove();};
+      warn.appendChild(x);
+      document.body.appendChild(warn);
+    }
+  }catch(_){}
   badge=document.createElement('div');
   badge.id='_dbgBadge';
   badge.style.cssText='position:fixed;bottom:74px;left:8px;z-index:99998;background:#78350f;color:#fff;font-family:monospace;font-size:10px;font-weight:700;padding:4px 8px;border-radius:12px;opacity:.85;cursor:pointer;box-shadow:0 2px 6px #0008';
