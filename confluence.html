@@ -2880,15 +2880,10 @@ async function fetchOrderBook(symbol){
 }
 
 async function fetchFundingHistory(symbol){
-  try{
-    /* Use direct fetch only — avoid proxy for this endpoint */
-    const base=BASES[baseIdx%BASES.length];
-    const r=await fetch(base+'/v2/funding_history?symbol='+symbol+'&page_size=90',
-      {signal:AbortSignal.timeout(5000)});
-    if(!r.ok)return[];
-    const d=await r.json();
-    return (d?.result||[]).map(r=>+(r.funding_rate||0)*100);
-  }catch(e){return[];}
+  // /v2/funding_history endpoint removed from Delta India API (returns 404).
+  // The current funding_rate is already present in the bulk tickers fetch.
+  // Return empty — analyzeFull reads fRate directly from the ticker object.
+  return [];
 }
 
 async function fetchTakerRatio(symbol){
