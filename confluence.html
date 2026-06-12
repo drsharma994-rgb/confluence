@@ -2887,27 +2887,9 @@ async function fetchFundingHistory(symbol){
 }
 
 async function fetchTakerRatio(symbol){
-  // Delta Exchange trades endpoint — get last 100 trades, compute buy vs sell
-  try{
-    const base=BASES[baseIdx%BASES.length];
-    const r=await fetch(base+'/v2/trades?symbol='+symbol+'&limit=100',
-      {signal:AbortSignal.timeout(5000)});
-    if(!r.ok)return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
-    const d=await r.json();
-    const trades=d?.result||[];
-    let buyVol=0,sellVol=0;
-    trades.forEach(t=>{
-      const sz=+(t.size||t.quantity||0);
-      // buyer_role: 'buy' means buyer was taker (aggressive buy)
-      if(t.buyer_role==='buy'||t.side==='buy')buyVol+=sz;
-      else sellVol+=sz;
-    });
-    const total=buyVol+sellVol||1;
-    const buyPct=buyVol/total*100;
-    const ratio=buyVol/(sellVol||1);
-    const takerDir=buyPct>60?'long':buyPct<40?'short':'neutral';
-    return{buyPct,sellPct:100-buyPct,ratio,takerDir,buyVol,sellVol};
-  }catch(e){return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};}
+  // /v2/trades endpoint removed from Delta India API (returns 404).
+  // Return neutral defaults — taker flow indicator will show N/A.
+  return{buyPct:50,sellPct:50,ratio:1,takerDir:'neutral'};
 }
 
 async function fetchSpotPrice(base){
