@@ -2465,8 +2465,8 @@ function analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,fng,takerData){
   }
 
   // Legacy lN/sN for card rendering
-  lChecks={aboveE20:price>e20v,aboveE50:price>e50v,aboveE200:hasLong?price>e200v:null,rsiBull:rsiV>50&&rsiV<75,macdBullH:macdBull(mc.hist),stochBull:sk<40&&sk>sd,obvRising:obvArr[L-1]>obvArr[Math.max(0,L-6)],dir4hBull:dir4h==='long'};
-  sChecks={belowE20:price<e20v,belowE50:price<e50v,rsiBear:rsiV<50&&rsiV>25,macdBearH:macdBear(mc.hist),stochBear:sk>60&&sk<sd,obvFalling:obvArr[L-1]<obvArr[Math.max(0,L-6)],dir4hBear:dir4h==='short'};
+  lChecks={aboveE20:price>e20v,aboveE50:price>e50v,aboveE200:hasLong?price>e200v:null,rsiBull:rsiV>50&&rsiV<=68,macdBullH:macdBull(mc.hist),stochBull:sk<40&&sk>sd,obvRising:obvArr[L-1]>obvArr[Math.max(0,L-6)],dir4hBull:dir4h==='long'};
+  sChecks={belowE20:price<e20v,belowE50:price<e50v,rsiBear:rsiV<50&&rsiV>=32,macdBearH:macdBear(mc.hist),stochBear:sk>60&&sk<sd,obvFalling:obvArr[L-1]<obvArr[Math.max(0,L-6)],dir4hBear:dir4h==='short'};
   lN=Object.values(lChecks).filter(x=>x===true).length;
   sN=Object.values(sChecks).filter(x=>x===true).length;
   if(!_rawStrength)_rawStrength=Math.round((dir==='long'?lN:sN)/Math.max(Object.keys(lChecks).length,Object.keys(sChecks).length)*100);
@@ -4543,7 +4543,14 @@ function card(a,best,isPinned){
       } else if(_hfs.agreement>=3&&!_rrOk){
         _gatedSlcLabel='WATCH - R:R '+(_rrVal2>=0?_rrVal2.toFixed(1):'?')+' (need >=2)'; _gatedSlcColor='#f59e0b';
       } else if(_hfs.agreement>=3&&_rrOk){
-        _gatedSlcLabel='VALID SETUP'; _gatedSlcColor='#22c55e';
+        // RSI exhaustion check — overbought LONG or oversold SHORT
+        const _rsiNow=a.rsiVal||50;
+        const _rsiExhausted=(dir==='long'&&_rsiNow>68)||(dir==='short'&&_rsiNow<32);
+        if(_rsiExhausted){
+          _gatedSlcLabel='⚠️ EXTENDED — RSI '+Math.round(_rsiNow); _gatedSlcColor='#f97316';
+        } else {
+          _gatedSlcLabel='VALID SETUP'; _gatedSlcColor='#22c55e';
+        }
       }
       const _rrNote=(plan&&isFinite(plan.rr)&&plan.rr<2&&_hfs.agreement>=3)
         ?'<span style="font-family:var(--mono);font-size:8px;color:#ef4444;margin-left:4px">R:R&lt;2 — caution</span>':'';
@@ -25618,8 +25625,8 @@ function familyScore(a){
   let momBull=0,momBear=0;
   // RSI — not overbought for longs, not oversold for shorts
   const rsi=a.rsiVal||50;
-  if(isLong&&rsi>45&&rsi<72)momBull++;else if(!isLong&&rsi<55&&rsi>28)momBull++;
-  else if(isLong&&rsi>78)momBear++;else if(!isLong&&rsi<22)momBear++;
+  if(isLong&&rsi>45&&rsi<=68)momBull++;else if(!isLong&&rsi<55&&rsi>=32)momBull++;
+  else if(isLong&&rsi>68)momBear++;else if(!isLong&&rsi<32)momBear++; // overbought/oversold = exhaustion = momentum BEAR
 
   // MACD
   const ds=a.divScan||{};
