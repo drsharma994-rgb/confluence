@@ -6669,6 +6669,8 @@ function renderCoinDetail(a){
         <div style="background:#1e293b;border-radius:4px;height:5px;margin-bottom:10px;overflow:hidden">
           <div style="width:${entry.confidence}%;height:100%;background:${confColor};border-radius:4px;transition:width .4s"></div>
         </div>
+        <!-- Honesty note: confidence is heuristic, not validated win-rate -->
+        <div style="font-family:var(--mono);font-size:9px;color:#64748b;margin-bottom:8px;line-height:1.4">⚠ Heuristic score — not a validated win-rate. No backtest behind this number yet.</div>
         <!-- Entry zone -->
         <div style="background:#f59e0b11;border:1px solid #f59e0b44;border-radius:8px;padding:8px 10px;margin-bottom:8px;${_standAside?'opacity:.45':''}">
           <div style="font-family:var(--mono);font-size:9px;color:#fbbf24;letter-spacing:1.5px;margin-bottom:4px;font-weight:800">${_standAside?'REFERENCE ZONE — DO NOT CHASE':'ENTRY ZONE'}</div>
