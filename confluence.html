@@ -1763,7 +1763,7 @@ audio{display:none}
 
 const BASES=["https://api.india.delta.exchange","https://api.delta.exchange"];
 const FNG_URL="https://api.alternative.me/fng/?limit=1";
-const API=((new URLSearchParams(location.search)).get('api')||"").replace(/\/+$/,"");
+var API=((new URLSearchParams(location.search)).get('api')||"").replace(/\/+$/,"");
 const FULL_EVERY=150,PRICE_EVERY=25,NFACT=12; // OI excluded (data flat)
 
 let state={
@@ -2758,7 +2758,7 @@ const _atrFloorL=atrv>0?0.4*atrv:price*0.004;const _rawStopL=(inv<price&&inv>_at
 /* ── PART 5: FETCH + DATA PIPELINE ── */
 
 /* BASES/PROXIES defined above */
-const PROXIES=['','https://api.allorigins.win/get?url='];
+var PROXIES=['','https://api.allorigins.win/get?url='];
 let proxyIdx=0,baseIdx=0;
 
 async function getJSON(url,attempt=0){
@@ -6052,7 +6052,7 @@ function renderFeed(){
 /* ══════════════════════════════════════════════════════
    TELEGRAM CONFIG — stored in localStorage, no worker needed
    ══════════════════════════════════════════════════════ */
-const TG={
+var TG={
   get token(){return localStorage.getItem('tg_token')||'';},
   set token(v){localStorage.setItem('tg_token',v);},
   get chat(){return localStorage.getItem('tg_chat')||'';},
@@ -10266,7 +10266,7 @@ function tick(){
  * ============================================================
  */
 
-const SLC = (() => {
+var SLC = (() => {
 
   // ──────────────────────────────────────────────
   //  CONSTANTS
@@ -11237,7 +11237,7 @@ function slcRenderPanel(containerId) {
  *  SLC.resetWeights('crypto');
  * ============================================================
  */
-const GOLD = {
+var GOLD = {
   price: 0, prev: 0, dxy: 0, dxyPrev: 0, us10y: 0, realYield: 2.1, oil: 75, oilPrev: 75, fng: 50, fngClass: 'Neutral',
   spx: 0, spxPrev: 0, vix: 0,
   candles1h: [], candles4h: [], candles1d: [],
@@ -11250,8 +11250,8 @@ const GOLD = {
 // Spot price: gold-api.com (CORS *, free, matches Star Trader XAUUSD within $2–5)
 // Price correction: all PAXG candle prices are scaled by (gold_spot / paxg_current)
 // This aligns every price label in the app to Star Trader's XAUUSD CFD price
-const GOLD_BASE = 'https://www.okx.com'; // OKX — open CORS, works from India
-const GOLD_SYM  = 'PAXGUSDT';
+var GOLD_BASE = 'https://www.okx.com'; // OKX — open CORS, works from India
+var GOLD_SYM  = 'PAXGUSDT';
 GOLD.priceFactor = 1; // will be set after fetching both prices
 
 async function fetchGoldSpot() {
@@ -12908,7 +12908,7 @@ function renderGoldTab() {
 
 // ── 1. KILL ZONE TIMER ENGINE ──────────────────────────────────
 // All times in UTC; converts to IST (+5:30) for display
-const KILL_ZONES = [
+var KILL_ZONES = [
   { name: 'Gold London AM Fix',  utcStart: 4*60+30,  utcEnd: 5*60+30,  color: '#f59e0b', emoji: '🥇', priority: 5 },
   { name: 'London Open (Crypto)',utcStart: 3*60,      utcEnd: 5*60,     color: '#3b82f6', emoji: '🔵', priority: 4 },
   { name: 'London–NY Overlap',   utcStart: 13*60+30,  utcEnd: 17*60+30, color: '#22c55e', emoji: '⭐', priority: 5 },
@@ -13020,7 +13020,7 @@ function renderKillZoneTimer(containerId) {
 }
 
 // ── 2. LIQUIDITY SWEEP DETECTOR ────────────────────────────────
-const SWEEP_STATE = { gold: null, detected: [] };
+var SWEEP_STATE = { gold: null, detected: [] };
 
 function detectLiquiditySweep(candles, symbol) {
   if (!candles || candles.length < 10) return null;
@@ -21656,7 +21656,7 @@ input[type=number].aa-input,select.aa-input{width:100%;padding:8px 10px;border-r
 'use strict';
 
 // ── state ────────────────────────────────────────────────────────────────────
-const ST = {
+var ST = {
   goldCache: null, goldCacheTs: 0,
   strategyResults: [],
   lastScanTs: 0,
@@ -24369,7 +24369,7 @@ function instFmt(n){
 /* ================================================================
    INSTITUTIONAL DATA STORE
 ================================================================ */
-const INST={perCoin:{},macro:{},lastRefresh:0};
+var INST={perCoin:{},macro:{},lastRefresh:0};
 
 /* ================================================================
    MACRO CARD UPDATER
@@ -24811,7 +24811,7 @@ window.fetchSantimentWhale=fetchSantimentWhale;
 /* ================================================================
    WHALE SCORE STORE  (sym → {score,label,cls,reasons,santData})
 ================================================================ */
-const WHALE={};
+var WHALE={};
 window.WHALE=WHALE;
 
 /* ================================================================
