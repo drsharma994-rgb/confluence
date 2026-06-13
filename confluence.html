@@ -1763,10 +1763,10 @@ audio{display:none}
 
 const BASES=["https://api.india.delta.exchange","https://api.delta.exchange"];
 const FNG_URL="https://api.alternative.me/fng/?limit=1";
-var API=((new URLSearchParams(location.search)).get('api')||"").replace(/\/+$/,"");
+const API=((new URLSearchParams(location.search)).get('api')||"").replace(/\/+$/,"");
 const FULL_EVERY=150,PRICE_EVERY=25,NFACT=12; // OI excluded (data flat)
 
-var state={
+let state={
   analyzed:{},fng:null,alerts:[],prevHit:{},notify:false,pushEnabled:false,
   countdown:FULL_EVERY,totalPerps:0,priceClock:0,
   lastCandleClose:{},last15mAlert:{},
@@ -1786,7 +1786,7 @@ var state={
 };
 
 /* ── V7 State Object ── */
-var S={
+const S={
   universe:[],
   allSymbols:[],
   fng:{value:50,class:'Neutral'},
@@ -2375,7 +2375,6 @@ function analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,fng,takerData){
   /* CVD + Funding Rate (needed by direction engine — must be before direction block) */
   const cvdRes=cvdDelta(closes,vols);
   const fRate=+(tk.funding_rate??0)*100; // moved up for direction engine
-  if(isFinite(fRate)) _appendFundRate(sym.symbol, fRate); // localStorage funding cache
 
   /* ── v13.12: HTF-FIRST DIRECTION ENGINE (with safe fallback) ── */
   let dir, _dirConflict=false, _dirConf=50, _conviction='MODERATE';
@@ -2466,8 +2465,8 @@ function analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,fng,takerData){
   }
 
   // Legacy lN/sN for card rendering
-  lChecks={aboveE20:price>e20v,aboveE50:price>e50v,aboveE200:hasLong?price>e200v:null,rsiBull:rsiV>50&&rsiV<=68,macdBullH:macdBull(mc.hist),stochBull:sk<40&&sk>sd,obvRising:obvArr[L-1]>obvArr[Math.max(0,L-6)],dir4hBull:dir4h==='long'};
-  sChecks={belowE20:price<e20v,belowE50:price<e50v,rsiBear:rsiV<50&&rsiV>=32,macdBearH:macdBear(mc.hist),stochBear:sk>60&&sk<sd,obvFalling:obvArr[L-1]<obvArr[Math.max(0,L-6)],dir4hBear:dir4h==='short'};
+  lChecks={aboveE20:price>e20v,aboveE50:price>e50v,aboveE200:hasLong?price>e200v:null,rsiBull:rsiV>50&&rsiV<75,macdBullH:macdBull(mc.hist),stochBull:sk<40&&sk>sd,obvRising:obvArr[L-1]>obvArr[Math.max(0,L-6)],dir4hBull:dir4h==='long'};
+  sChecks={belowE20:price<e20v,belowE50:price<e50v,rsiBear:rsiV<50&&rsiV>25,macdBearH:macdBear(mc.hist),stochBear:sk>60&&sk<sd,obvFalling:obvArr[L-1]<obvArr[Math.max(0,L-6)],dir4hBear:dir4h==='short'};
   lN=Object.values(lChecks).filter(x=>x===true).length;
   sN=Object.values(sChecks).filter(x=>x===true).length;
   if(!_rawStrength)_rawStrength=Math.round((dir==='long'?lN:sN)/Math.max(Object.keys(lChecks).length,Object.keys(sChecks).length)*100);
@@ -2758,11 +2757,11 @@ const _atrFloorL=atrv>0?0.4*atrv:price*0.004;const _rawStopL=(inv<price&&inv>_at
 /* ── PART 5: FETCH + DATA PIPELINE ── */
 
 /* BASES/PROXIES defined above */
-var PROXIES=['','https://api.allorigins.win/get?url='];
+const PROXIES=['','https://api.allorigins.win/get?url='];
 let proxyIdx=0,baseIdx=0;
 
 async function getJSON(url,attempt=0){
-  if(attempt>1)throw new Error('Max retries'); // max 2 attempts: direct + one proxy
+  if(attempt>2)throw new Error('Max retries');
   const px=PROXIES[proxyIdx%PROXIES.length];
   const full=px?px+encodeURIComponent(url):url;
   try{
@@ -2885,11 +2884,26 @@ async function fetchOrderBook(symbol){
 }
 
 async function fetchFundingHistory(symbol){
-  // localStorage cache — replaces deleted /v2/funding_history endpoint (404 on Delta India)
-  return Promise.resolve(_getFundHistory(symbol));
+  // v13.14 FIX: /v2/funding_history does not exist on Delta (always 404).
+  // The documented source is /v2/history/candles with the FUNDING: symbol
+  // prefix. 4h resolution × 30 days ≈ 180 points, newest-first to preserve
+  // the original consumer contract (fhArr[0] = most recent).
+  // NOTE: unit scale of these values vs ticker funding_rate is calibrated
+  // empirically by FUND CHECK (v13_fund_cal) — do not hardcode ×100 here.
+  try{
+    const base=BASES[baseIdx%BASES.length];
+    const now=Math.floor(Date.now()/1000), start=now-30*86400;
+    const r=await fetch(base+'/v2/history/candles?resolution=4h&symbol=FUNDING:'+symbol+'&start='+start+'&end='+now,
+      {signal:AbortSignal.timeout(6000)});
+    if(!r.ok)return[];
+    const d=await r.json();
+    const arr=(d?.result||[]).map(x=>+(x.close??x.c??0)).filter(v=>isFinite(v));
+    arr.reverse(); // Delta returns ascending time → newest-first
+    return arr;
+  }catch(e){return[];}
 }
 
-let _takerDead=1; // v2/trades removed from Delta India API — disabled at startup
+let _takerDead=0; // v13.14: /v2/trades appears not to exist publicly — stop after 3 fails
 async function fetchTakerRatio(symbol){
   // Delta Exchange trades endpoint — get last 100 trades, compute buy vs sell
   try{
@@ -2919,8 +2933,7 @@ async function fetchTakerRatio(symbol){
 async function fetchSpotPrice(base){
   // CoinGecko free API — no key needed
   try{
-    const _cgMap={'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'};
-    const id=_cgMap[base]; if(!id)return null; // skip unknown coins — avoids noise in error log
+    const id=({'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin','XRP':'ripple','DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','MATIC':'matic-network','DOT':'polkadot','LINK':'chainlink','UNI':'uniswap','ATOM':'cosmos','LTC':'litecoin','BCH':'bitcoin-cash','NEAR':'near','FTM':'fantom','OP':'optimism','ARB':'arbitrum'}[base])||base.toLowerCase();
     const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd',{signal:AbortSignal.timeout(5000)});
     if(!r.ok)return null;
     const d=await r.json();
@@ -2995,7 +3008,7 @@ async function buildUniverse(tickers){
         fetchCandles(sym.symbol,'4h',120),
         fetchCandles(sym.symbol,'1d',30),
         fetchOrderBook(sym.symbol),
-        Promise.resolve(_getFundHistory(sym.symbol)),
+        fetchFundingHistory(sym.symbol),
         fetchTakerRatio(sym.symbol),
       ]);
       const a=analyzeFull(sym,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,S.fng,takerData);
@@ -3007,7 +3020,6 @@ async function buildUniverse(tickers){
   S.universe=results.filter(Boolean);
   // ── Stage 1: Cross-sectional percentile ranking ──────────────────────────
   try { _computeCrossSectionalRank(S.universe); } catch(_re){ console.warn('[xrank]', _re); }
-  _saveFundStore(); // persist funding history after each full scan
   S.lastFull=Date.now();
 }
 
@@ -3152,7 +3164,7 @@ const AA={
 const _aaFired={}; // sym -> timestamp last alert fired
 const _aaLog=[];   // circular log of fired alerts (max 50)
 const _oiDivState={}; // sym -> {lastOI, lastPrice, alertedAt}
-var _oiStore={}; // sym -> last known OI for cross-scan diff
+const _oiStore={}; // sym -> last known OI for cross-scan diff
 // Restore persisted OI state (5min staleness guard)
 (function(){
   try{
@@ -3167,26 +3179,6 @@ function _saveOIStore(){
   try{localStorage.setItem('cfx_oi_store',JSON.stringify(Object.assign({},_oiStore,{_ts:Date.now()})));}catch(_){}
 }
 const _fundVelState={}; // sym -> {lastRate, lastTs, alertedAt}
-// ── localStorage Funding History Cache ───────────────────────────────────
-const _fundStore = {};
-(function(){
-  try{
-    const raw=localStorage.getItem('cfx_fund_store');
-    if(raw){ const parsed=JSON.parse(raw); Object.assign(_fundStore,parsed); }
-  }catch(e){}
-})();
-function _saveFundStore(){
-  try{ localStorage.setItem('cfx_fund_store',JSON.stringify(_fundStore)); }catch(e){}
-}
-function _appendFundRate(sym,rate){
-  if(!_fundStore[sym])_fundStore[sym]=[];
-  _fundStore[sym].unshift(rate);
-  if(_fundStore[sym].length>90)_fundStore[sym].length=90;
-}
-function _getFundHistory(sym){
-  return _fundStore[sym]||[];
-}
-
 const _cvdFlipState={}; // sym -> {lastDir, alertedAt}
 const _liqCascadeState={lastBTCOI:0,lastBTCFund:0,ts:0,alertedAt:0};
 const _microSqzState={}; // sym -> {alertedAt}
@@ -4551,14 +4543,7 @@ function card(a,best,isPinned){
       } else if(_hfs.agreement>=3&&!_rrOk){
         _gatedSlcLabel='WATCH - R:R '+(_rrVal2>=0?_rrVal2.toFixed(1):'?')+' (need >=2)'; _gatedSlcColor='#f59e0b';
       } else if(_hfs.agreement>=3&&_rrOk){
-        // RSI exhaustion check — overbought LONG or oversold SHORT
-        const _rsiNow=a.rsiVal||50;
-        const _rsiExhausted=(dir==='long'&&_rsiNow>68)||(dir==='short'&&_rsiNow<32);
-        if(_rsiExhausted){
-          _gatedSlcLabel='⚠️ EXTENDED — RSI '+Math.round(_rsiNow); _gatedSlcColor='#f97316';
-        } else {
-          _gatedSlcLabel='VALID SETUP'; _gatedSlcColor='#22c55e';
-        }
+        _gatedSlcLabel='VALID SETUP'; _gatedSlcColor='#22c55e';
       }
       const _rrNote=(plan&&isFinite(plan.rr)&&plan.rr<2&&_hfs.agreement>=3)
         ?'<span style="font-family:var(--mono);font-size:8px;color:#ef4444;margin-left:4px">R:R&lt;2 — caution</span>':'';
@@ -6052,7 +6037,7 @@ function renderFeed(){
 /* ══════════════════════════════════════════════════════
    TELEGRAM CONFIG — stored in localStorage, no worker needed
    ══════════════════════════════════════════════════════ */
-var TG={
+const TG={
   get token(){return localStorage.getItem('tg_token')||'';},
   set token(v){localStorage.setItem('tg_token',v);},
   get chat(){return localStorage.getItem('tg_chat')||'';},
@@ -7553,7 +7538,7 @@ setInterval(stFetchRemoteSignals, 90000);
 setTimeout(stFetchRemoteSignals, 2000);
 
 /* ── EXTRA CSS FOR PRICE GRID + PILLS ── */
-var stExtraCSS = `
+const stExtraCSS = `
 .st-price-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px;margin:10px 0}
 .st-price-cell{background:var(--panel);border-radius:7px;padding:6px 8px;text-align:center}
 .st-price-label{font-family:var(--mono);font-size:8px;font-weight:700;color:var(--dim);letter-spacing:.8px;text-transform:uppercase}
@@ -8402,7 +8387,34 @@ async function fetchJson(url){
   return r.json();
 }
 
-async 
+async function fetchGoldSpot(){
+  // Source 1: gold-api.com (confirmed working from India, CORS open)
+  const goldApiUrl='https://api.gold-api.com/price/XAU';
+  const proxies=['','https://api.allorigins.win/get?url='];
+  for(const px of proxies){
+    try{
+      const url=px?px+encodeURIComponent(goldApiUrl):goldApiUrl;
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      const raw=await r.json();
+      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
+      const p=parseFloat(d.price||d.Price||d.bid||0);
+      if(p>1000) return p;
+    }catch(e){ console.warn('fetchGoldSpot gold-api ('+(px||'direct')+'):',e.message); }
+  }
+  // Source 2: OKX PAXG-USDT (open CORS, works from India)
+  const okxUrl='https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT';
+  for(const px of proxies){
+    try{
+      const url=px?px+encodeURIComponent(okxUrl):okxUrl;
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      const raw=await r.json();
+      const d=typeof raw==='object'&&raw.contents?JSON.parse(raw.contents):raw;
+      const p=parseFloat(d?.data?.[0]?.last||0);
+      if(p>1000) return p;
+    }catch(e){ console.warn('fetchGoldSpot OKX ('+(px||'direct')+'):',e.message); }
+  }
+  return 0;
+}
 
 async function fetchPaxgCandles(interval,limit){
   // SOURCE 1: CryptoCompare — ACAO:* (works from file:// on Android Chrome)
@@ -10266,7 +10278,7 @@ function tick(){
  * ============================================================
  */
 
-var SLC = (() => {
+const SLC = (() => {
 
   // ──────────────────────────────────────────────
   //  CONSTANTS
@@ -11237,7 +11249,7 @@ function slcRenderPanel(containerId) {
  *  SLC.resetWeights('crypto');
  * ============================================================
  */
-var GOLD = {
+const GOLD = {
   price: 0, prev: 0, dxy: 0, dxyPrev: 0, us10y: 0, realYield: 2.1, oil: 75, oilPrev: 75, fng: 50, fngClass: 'Neutral',
   spx: 0, spxPrev: 0, vix: 0,
   candles1h: [], candles4h: [], candles1d: [],
@@ -11250,8 +11262,8 @@ var GOLD = {
 // Spot price: gold-api.com (CORS *, free, matches Star Trader XAUUSD within $2–5)
 // Price correction: all PAXG candle prices are scaled by (gold_spot / paxg_current)
 // This aligns every price label in the app to Star Trader's XAUUSD CFD price
-var GOLD_BASE = 'https://www.okx.com'; // OKX — open CORS, works from India
-var GOLD_SYM  = 'PAXGUSDT';
+const GOLD_BASE = 'https://www.okx.com'; // OKX — open CORS, works from India
+const GOLD_SYM  = 'PAXGUSDT';
 GOLD.priceFactor = 1; // will be set after fetching both prices
 
 async function fetchGoldSpot() {
@@ -11383,7 +11395,7 @@ async function fetchGoldMacro() {
 
   // ── US10Y + SPX + VIX via Yahoo Finance (CORS varies) ──
   try {
-    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:4.5}}]}}) /* Yahoo blocked India — static fallback */;
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
     const d = await r.json();
     const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
     if (v) GOLD.us10y = v;
@@ -11393,7 +11405,7 @@ async function fetchGoldMacro() {
 
   // SPX
   try {
-    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:5500}}]}}) /* Yahoo blocked India — static fallback */;
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
     const d = await r.json();
     const result = d?.chart?.result?.[0];
     const price = result?.meta?.regularMarketPrice;
@@ -11402,7 +11414,7 @@ async function fetchGoldMacro() {
   } catch(e) { GOLD.spx = GOLD.spx || 5000; GOLD.spxPrev = GOLD.spxPrev || 5000; }
   // VIX
   try {
-    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:18}}]}}) /* Yahoo blocked India — static fallback */;
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=3d', {signal:AbortSignal.timeout(5000)});
     const d = await r.json();
     const v = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
     if (v) GOLD.vix = v;
@@ -11410,7 +11422,7 @@ async function fetchGoldMacro() {
 
   // ── Oil (XTIUSD) — for Holy Trinity ──
   try {
-    const r = await Promise.resolve({chart:{result:[{meta:{regularMarketPrice:75}}]}}) /* Yahoo blocked India — static fallback */;
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF?interval=1d&range=5d', {signal:AbortSignal.timeout(5000)});
     const d = await r.json();
     const result = d?.chart?.result?.[0];
     const price = result?.meta?.regularMarketPrice;
@@ -12908,7 +12920,7 @@ function renderGoldTab() {
 
 // ── 1. KILL ZONE TIMER ENGINE ──────────────────────────────────
 // All times in UTC; converts to IST (+5:30) for display
-var KILL_ZONES = [
+const KILL_ZONES = [
   { name: 'Gold London AM Fix',  utcStart: 4*60+30,  utcEnd: 5*60+30,  color: '#f59e0b', emoji: '🥇', priority: 5 },
   { name: 'London Open (Crypto)',utcStart: 3*60,      utcEnd: 5*60,     color: '#3b82f6', emoji: '🔵', priority: 4 },
   { name: 'London–NY Overlap',   utcStart: 13*60+30,  utcEnd: 17*60+30, color: '#22c55e', emoji: '⭐', priority: 5 },
@@ -13020,7 +13032,7 @@ function renderKillZoneTimer(containerId) {
 }
 
 // ── 2. LIQUIDITY SWEEP DETECTOR ────────────────────────────────
-var SWEEP_STATE = { gold: null, detected: [] };
+const SWEEP_STATE = { gold: null, detected: [] };
 
 function detectLiquiditySweep(candles, symbol) {
   if (!candles || candles.length < 10) return null;
@@ -13740,7 +13752,7 @@ function renderVWAPAlert(candles, containerId) {
 }
 
 // ── MASTER REFRESH FUNCTION ──────────────────────────────────────
-var _instRefreshTimer = null; // var (not let) — hoisted, no temporal dead zone
+let _instRefreshTimer = null;
 function startInstitutionalDashRefresh() {
   if (_instRefreshTimer) clearInterval(_instRefreshTimer);
   // Refresh kill zone timer every 30s
@@ -13829,7 +13841,7 @@ async function loadGoldData(force=false) {
   if(GOLD.refreshTimer) clearInterval(GOLD.refreshTimer);
   GOLD.refreshTimer=setInterval(()=>{ if(S.tab==='gold') loadGoldData(true); },900000);
 }
-var GS = {
+const GS = {
   candles1m:    [],
   candles5m:    [],
   tick:         null,
@@ -16318,7 +16330,7 @@ function initGoldScalp() {
   gsRefresh();
   GS.refreshTimer = setInterval(gsRefresh, 10000);
 }
-var CA = {
+const CA = {
   tickers: [],
   results: [],
   top3: [],
@@ -21656,7 +21668,7 @@ input[type=number].aa-input,select.aa-input{width:100%;padding:8px 10px;border-r
 'use strict';
 
 // ── state ────────────────────────────────────────────────────────────────────
-var ST = {
+const ST = {
   goldCache: null, goldCacheTs: 0,
   strategyResults: [],
   lastScanTs: 0,
@@ -24369,7 +24381,7 @@ function instFmt(n){
 /* ================================================================
    INSTITUTIONAL DATA STORE
 ================================================================ */
-var INST={perCoin:{},macro:{},lastRefresh:0};
+const INST={perCoin:{},macro:{},lastRefresh:0};
 
 /* ================================================================
    MACRO CARD UPDATER
@@ -24811,7 +24823,7 @@ window.fetchSantimentWhale=fetchSantimentWhale;
 /* ================================================================
    WHALE SCORE STORE  (sym → {score,label,cls,reasons,santData})
 ================================================================ */
-var WHALE={};
+const WHALE={};
 window.WHALE=WHALE;
 
 /* ================================================================
@@ -25606,8 +25618,8 @@ function familyScore(a){
   let momBull=0,momBear=0;
   // RSI — not overbought for longs, not oversold for shorts
   const rsi=a.rsiVal||50;
-  if(isLong&&rsi>45&&rsi<=68)momBull++;else if(!isLong&&rsi<55&&rsi>=32)momBull++;
-  else if(isLong&&rsi>68)momBear++;else if(!isLong&&rsi<32)momBear++; // overbought/oversold = exhaustion = momentum BEAR
+  if(isLong&&rsi>45&&rsi<72)momBull++;else if(!isLong&&rsi<55&&rsi>28)momBull++;
+  else if(isLong&&rsi>78)momBear++;else if(!isLong&&rsi<22)momBear++;
 
   // MACD
   const ds=a.divScan||{};
@@ -26462,7 +26474,7 @@ setTimeout(function(){try{injectHonestBadges();}catch(e){}},3000);
 (function(){ 'use strict';
 
 /* ── BINANCE LAYER ─────────────────────────────────────────────────────── */
-var BX = { cache:{}, dead:1 }; // fapi.binance.com + api.binance.com geo-blocked in India
+var BX = { cache:{}, dead:0 };
 function bx_sym(base){ return String(base||'').toUpperCase().replace(/USDT?$/,'').replace(/[^A-Z0-9]/g,'') + 'USDT'; }
 
 async function bx_fetch(base){
@@ -26474,7 +26486,7 @@ async function bx_fetch(base){
     var pr = await Promise.all([
       fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'&interval=1h&limit=25',{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      Promise.resolve(null) // api.binance.com geo-blocked in India — removed
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol='+sym,{signal:AbortSignal.timeout(6000)}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
     ]);
     var kl=pr[0], pi=pr[1], sp=pr[2];
     if(!kl || !Array.isArray(kl) || kl.length < 10){
@@ -26895,12 +26907,11 @@ window.addEventListener('unhandledrejection',function(e){
 var _f=window.fetch.bind(window);
 window.fetch=function(u,o){
   var url=typeof u==='string'?u:(u&&u.url)||'?';
-  var _isSuppressed=/localhost|127\.0\.0\.1|fapi\.binance\.com|api\.binance\.com|allorigins\.win/.test(String(url));
   return _f.apply(this,arguments).then(function(r){
-    if(r&&!r.ok&&r.status>=400&&!_isSuppressed)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
+    if(r&&!r.ok&&r.status>=400)add('NET','HTTP '+r.status+' '+String(url).slice(0,120));
     return r;
   }).catch(function(err){
-    if(!_isSuppressed)add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
+    add('NET',(err&&err.name==='TimeoutError'?'timeout ':'fail ')+String(url).slice(0,120));
     throw err;
   });
 };
