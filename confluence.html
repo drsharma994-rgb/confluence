@@ -1766,7 +1766,7 @@ const FNG_URL="https://api.alternative.me/fng/?limit=1";
 var API=((new URLSearchParams(location.search)).get('api')||"").replace(/\/+$/,"");
 const FULL_EVERY=150,PRICE_EVERY=25,NFACT=12; // OI excluded (data flat)
 
-let state={
+var state={
   analyzed:{},fng:null,alerts:[],prevHit:{},notify:false,pushEnabled:false,
   countdown:FULL_EVERY,totalPerps:0,priceClock:0,
   lastCandleClose:{},last15mAlert:{},
@@ -1786,7 +1786,7 @@ let state={
 };
 
 /* ── V7 State Object ── */
-const S={
+var S={
   universe:[],
   allSymbols:[],
   fng:{value:50,class:'Neutral'},
@@ -3152,7 +3152,7 @@ const AA={
 const _aaFired={}; // sym -> timestamp last alert fired
 const _aaLog=[];   // circular log of fired alerts (max 50)
 const _oiDivState={}; // sym -> {lastOI, lastPrice, alertedAt}
-const _oiStore={}; // sym -> last known OI for cross-scan diff
+var _oiStore={}; // sym -> last known OI for cross-scan diff
 // Restore persisted OI state (5min staleness guard)
 (function(){
   try{
@@ -7553,7 +7553,7 @@ setInterval(stFetchRemoteSignals, 90000);
 setTimeout(stFetchRemoteSignals, 2000);
 
 /* ── EXTRA CSS FOR PRICE GRID + PILLS ── */
-const stExtraCSS = `
+var stExtraCSS = `
 .st-price-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px;margin:10px 0}
 .st-price-cell{background:var(--panel);border-radius:7px;padding:6px 8px;text-align:center}
 .st-price-label{font-family:var(--mono);font-size:8px;font-weight:700;color:var(--dim);letter-spacing:.8px;text-transform:uppercase}
@@ -13829,7 +13829,7 @@ async function loadGoldData(force=false) {
   if(GOLD.refreshTimer) clearInterval(GOLD.refreshTimer);
   GOLD.refreshTimer=setInterval(()=>{ if(S.tab==='gold') loadGoldData(true); },900000);
 }
-const GS = {
+var GS = {
   candles1m:    [],
   candles5m:    [],
   tick:         null,
@@ -16318,7 +16318,7 @@ function initGoldScalp() {
   gsRefresh();
   GS.refreshTimer = setInterval(gsRefresh, 10000);
 }
-const CA = {
+var CA = {
   tickers: [],
   results: [],
   top3: [],
