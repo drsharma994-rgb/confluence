@@ -6037,6 +6037,28 @@ function renderFeed(){
 /* ══════════════════════════════════════════════════════
    TELEGRAM CONFIG — stored in localStorage, no worker needed
    ══════════════════════════════════════════════════════ */
+/* ── Entry Engine TAKE → Telegram manual send ── */
+function _tgEntrySend(btn){
+  var d=btn&&btn._tgData;
+  if(!d){btn.textContent='✗';setTimeout(function(){btn.textContent='📲';},2000);return;}
+  var base=d.sym.replace('USDT','').replace('USD','');
+  var dr=d.dir==='long'?'🟢 LONG':'🔴 SHORT';
+  var rr=d.rr?d.rr.toFixed(2):'—';
+  var p5=function(v){return v?Number(v).toPrecision(5):'0';};
+  var sigLine=d.sigs&&d.sigs.length?'Signals: '+d.sigs.join(' · ')+'\n':'';
+  var msg='📲 *TAKE — '+base+'*\n'+dr+'\nPrice: `'+p5(d.price)+'`  R:R: '+rr+'\nStop: `'+p5(d.stop)+'`  T1: `'+p5(d.t1)+'`\nConf: '+d.conf+'% (heuristic)\n'+sigLine+'_Sent manually — '+new Date().toLocaleTimeString()+'_';
+  btn.textContent='⏳';
+  _sendTgRaw(msg).then(function(){
+    btn.textContent='✓ Sent';
+    btn.style.background='#22c55e44';
+    setTimeout(function(){btn.textContent='📲';btn.style.background='#22c55e22';},3000);
+  }).catch(function(){
+    btn.textContent='✗';
+    setTimeout(function(){btn.textContent='📲';},2000);
+  });
+}
+window._tgEntrySend=_tgEntrySend;
+
 const TG={
   get token(){return localStorage.getItem('tg_token')||'';},
   set token(v){localStorage.setItem('tg_token',v);},
@@ -6655,12 +6677,35 @@ function renderCoinDetail(a){
     else if(entry.confidence >= 35 && !_hardConflict){ _verdict='🟡 WAIT — partial confluence, let it develop'; _vColor='#f59e0b'; _vBg='#f59e0b15'; }
     else { _verdict='⛔ STAND ASIDE — '+(_vWhy.join(' · ')||'insufficient confluence'); _vColor='#ef4444'; _vBg='#ef444415'; }
     const _standAside = _verdict.startsWith('⛔');
+
+    /* ── Entry Engine TAKE → auto Telegram alert (30-min cooldown per coin) ── */
+    if(!window._tgEntryFired) window._tgEntryFired={};
+    const _tgCooldown=30*60*1000;
+    const _isTake=_verdict.startsWith('✅ TAKE');
+    const _tgKey=(a.coin?.symbol||sym||'?')+'|'+a.dir;
+    const _tgNow=Date.now();
+    if(_isTake&&TG.configured&&(!window._tgEntryFired[_tgKey]||_tgNow-window._tgEntryFired[_tgKey]>_tgCooldown)){
+      window._tgEntryFired[_tgKey]=_tgNow;
+      const _tgBase=(a.coin?.symbol||sym||'?').replace('USD','').replace('USDT','');
+      const _tgDr=a.dir==='long'?'🟢 LONG':'🔴 SHORT';
+      const _tgRR=a.plan?.rr?a.plan.rr.toFixed(2):'—';
+      const _tgPrice=entry.entryPrice||a.price||0;
+      const _tgStop=(a.plan?.stop||a.plan?.sl||entry.stopLoss||0);
+      const _tgT1=(a.plan?.t1||entry.tp1||0);
+      const _tgSigs=(entry.reasons||[]).slice(0,3).map(r=>String(r).replace(/\*|_/g,'')).join(' · ');
+      const _tgMsg=`✅ *TAKE — ${_tgBase}*\n${_tgDr}\nPrice: \`${Number(_tgPrice).toPrecision(5)}\`  R:R: ${_tgRR}\nStop: \`${Number(_tgStop).toPrecision(5)}\`  T1: \`${Number(_tgT1).toPrecision(5)}\`\nConf: ${entry.confidence}% (heuristic)\n${_tgSigs?'Signals: '+_tgSigs+'\n':''}_Entry Engine: TAKE — ${new Date().toLocaleTimeString()}_`;
+      _sendTgRaw(_tgMsg).catch(()=>{});
+    }
+
     const _eg = (typeof window.v13_entryGrade==='function') ? window.v13_entryGrade(a) : null;
     const _egChip = _eg ? `<span style="background:${_eg.grade==='A+'?'#22c55e':_eg.grade==='A'?'#84cc16':_eg.grade==='B'?'#f59e0b':'#64748b'}22;border:1px solid ${_eg.grade==='A+'?'#22c55e':_eg.grade==='A'?'#84cc16':_eg.grade==='B'?'#f59e0b':'#64748b'};border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:9px;font-weight:800;color:${_eg.grade==='A+'?'#22c55e':_eg.grade==='A'?'#84cc16':_eg.grade==='B'?'#f59e0b':'#94a3b8'}" title="${(_eg.parts.join(', ')||'no early signals')}">ENTRY ${_eg.grade}</span>` : '';
     pe.innerHTML=`
       <div style="background:linear-gradient(135deg,#111827,#1e293b);border:1px solid ${_standAside?'#ef444488':'#f59e0b88'};border-radius:12px;padding:12px 13px">
         <!-- Verdict banner -->
-        <div style="background:${_vBg};border:1px solid ${_vColor}55;border-radius:8px;padding:7px 10px;margin-bottom:9px;font-family:var(--mono);font-size:10px;font-weight:800;color:${_vColor};line-height:1.5">${_verdict}</div>
+        <div style="background:${_vBg};border:1px solid ${_vColor}55;border-radius:8px;padding:7px 10px;margin-bottom:9px;font-family:var(--mono);font-size:10px;font-weight:800;color:${_vColor};line-height:1.5;display:flex;justify-content:space-between;align-items:center">
+          <span>${_verdict}</span>
+          ${_isTake&&TG.configured?'<button id="tgEntryBtn" onclick="_tgEntrySend(this)" style="background:#22c55e22;border:1px solid #22c55e88;border-radius:6px;color:#22c55e;font-size:14px;padding:3px 8px;cursor:pointer;font-family:var(--mono);flex-shrink:0" title="Send to Telegram">📲</button>':''}
+        </div>
         <!-- Confidence bar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span style="font-family:var(--mono);font-size:9px;color:#94a3b8;letter-spacing:1px">CONFIDENCE (heuristic)</span>
@@ -6739,6 +6784,25 @@ function renderCoinDetail(a){
     }
     html+='</div>';
     pe.innerHTML=html;
+  })();
+
+  /* ── attach entry data to TG button so _tgEntrySend can read it ── */
+  (function(){
+    var btn=document.getElementById('tgEntryBtn');
+    if(!btn)return;
+    var v1310=a.v1310res;
+    var entry=v1310&&v1310.entry;
+    if(!entry)return;
+    btn._tgData={
+      sym:(a.coin&&a.coin.symbol)||'?',
+      dir:a.dir||'long',
+      price:entry.entryPrice||a.price||0,
+      stop:(a.plan&&(a.plan.stop||a.plan.sl))||entry.stopLoss||0,
+      t1:(a.plan&&a.plan.t1)||entry.tp1||0,
+      rr:(a.plan&&a.plan.rr)||0,
+      conf:entry.confidence||0,
+      sigs:(entry.reasons||[]).slice(0,3).map(function(r){return String(r).replace(/[*_]/g,'');})
+    };
   })();
 
   /* ─ Market Data ─ */
