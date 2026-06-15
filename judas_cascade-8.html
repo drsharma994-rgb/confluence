@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Judas Cascade — Delta perp scanner</title>
+<style>
+  :root{
+    --ink:#0b0e13; --panel:#11151c; --panel2:#0e1218; --line:#1c232e; --line2:#2a3340;
+    --dim:#6b7785; --txt:#c4ccd6; --bright:#e8edf3;
+    --teal:#3fd0c9; --tealdim:#1d3d3c;
+    --long:#2ecc8f; --short:#ff5c6c; --amber:#f0b24a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ink);color:var(--txt);font-family:var(--sans);-webkit-text-size-adjust:100%}
+  body{padding:0 0 64px}
+  a{color:var(--teal)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 14px}
+
+  /* ---- header / hero ---- */
+  header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0d1117,#0b0e13)}
+  .hero{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:18px 0 14px}
+  .mark{font-family:var(--mono);font-weight:700;letter-spacing:.5px;font-size:13px;color:var(--ink);
+        background:var(--teal);padding:4px 8px;border-radius:4px}
+  h1{font-size:15px;letter-spacing:.18em;text-transform:uppercase;margin:0;font-weight:600;color:var(--bright)}
+  .sub{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.04em}
+  .spec{font-family:var(--mono);font-size:11.5px;color:var(--dim);padding:0 0 16px;line-height:1.7;max-width:760px}
+  .spec b{color:var(--teal);font-weight:500}
+
+  /* ---- controls ---- */
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:14px 0}
+  button{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--txt);
+         background:var(--panel);border:1px solid var(--line2);border-radius:5px;padding:9px 14px;cursor:pointer}
+  button:hover{border-color:var(--teal);color:var(--bright)}
+  button:disabled{opacity:.4;cursor:default;border-color:var(--line)}
+  button.go{background:var(--teal);color:var(--ink);border-color:var(--teal);font-weight:700}
+  button.go:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent}
+  .seg{display:inline-flex;border:1px solid var(--line2);border-radius:5px;overflow:hidden}
+  .seg button{border:0;border-radius:0;border-right:1px solid var(--line2);padding:9px 12px}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--tealdim);color:var(--teal)}
+
+  details.cfg{border:1px solid var(--line);border-radius:7px;background:var(--panel2);margin:6px 0 4px}
+  details.cfg>summary{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
+        color:var(--dim);padding:11px 14px;cursor:pointer;list-style:none}
+  details.cfg>summary::-webkit-details-marker{display:none}
+  details.cfg>summary::before{content:"⌄ ";color:var(--teal)}
+  details.cfg[open]>summary::before{content:"⌃ "}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 14px;padding:4px 14px 16px}
+  .fld{display:flex;flex-direction:column;gap:4px}
+  .fld label{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+  .fld input,.fld select{font-family:var(--mono);font-size:12.5px;color:var(--bright);background:var(--ink);
+        border:1px solid var(--line2);border-radius:4px;padding:7px 8px;width:100%}
+  .fld input:focus,.fld select:focus{outline:0;border-color:var(--teal)}
+  .fld .hint{font-family:var(--mono);font-size:9.5px;color:#4d5764;line-height:1.4}
+
+  /* ---- status line ---- */
+  .cal{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:2px 0 6px}
+  .cal .callbl{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+  .cal input{font-family:var(--mono);font-size:13px;color:var(--bright);background:var(--ink);border:1px solid var(--line2);border-radius:5px;padding:9px 11px;width:150px;text-transform:uppercase;letter-spacing:.04em}
+  .cal input:focus{outline:0;border-color:var(--teal)}
+  .cal .calout{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+  .cal .calout b{color:var(--bright);font-weight:600}
+  .levels .pct{color:#5a6675;font-size:9.5px}
+  #searchResult{margin-top:2px}
+  .status{font-family:var(--mono);font-size:11.5px;color:var(--dim);padding:6px 0 2px;min-height:18px}
+  .status b{color:var(--teal);font-weight:500}
+  .prog{height:2px;background:var(--line);border-radius:2px;overflow:hidden;margin:6px 0 2px}
+  .prog>i{display:block;height:100%;width:0;background:var(--teal);transition:width .2s}
+
+  /* ---- market line ---- */
+  .market{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;padding:10px 12px;margin:6px 0 2px;
+          border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
+  .mk-lbl{font-size:9.5px;letter-spacing:.14em;color:var(--dim);border:1px solid var(--line2);border-radius:3px;padding:3px 7px}
+  .mk-body{color:var(--txt)} .mk-body b{font-weight:700;letter-spacing:1px}
+  .mk-up{color:var(--long)} .mk-dn{color:var(--short)} .mk-mix{color:var(--amber)}
+  /* ---- tabs ---- */
+  .tabs{display:flex;gap:4px;margin:16px 0 4px;border-bottom:1px solid var(--line)}
+  .tabs button{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--dim);background:transparent;
+        border:0;border-bottom:2px solid transparent;border-radius:0;padding:10px 14px;cursor:pointer}
+  .tabs button:hover{color:var(--txt)}
+  .tabs button.on{color:var(--teal);border-bottom-color:var(--teal)}
+  .pane[hidden]{display:none}
+  .note{font-family:var(--mono);font-size:10.5px;line-height:1.6;color:var(--dim);background:var(--panel2);
+        border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px;padding:10px 12px;margin:8px 0}
+  .note b{color:var(--txt)}
+  /* ---- section labels ---- */
+  .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+       padding:22px 0 8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:end}
+  .lbl .n{color:var(--teal)}
+
+  /* ---- setup card ---- */
+  .card{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;
+        border:1px solid var(--line);border-left-width:3px;border-radius:7px;background:var(--panel);
+        padding:12px 14px;margin:9px 0}
+  .card.long{border-left-color:var(--long)}
+  .card.short{border-left-color:var(--short)}
+  .card.valid{background:linear-gradient(90deg,rgba(63,208,201,.06),var(--panel) 40%);border-color:var(--tealdim)}
+
+  /* ladder = signature element: 4h/1h/15m/5m top-down */
+  .ladder{display:flex;flex-direction:column;gap:2px}
+  .rung{width:34px;height:9px;border-radius:2px;background:var(--line);position:relative}
+  .rung.up{background:var(--long)} .rung.dn{background:var(--short)}
+  .ladder .tick{font-family:var(--mono);font-size:7px;color:var(--dim);position:absolute;left:38px;top:1px;white-space:nowrap}
+
+  .mid{min-width:0}
+  .symrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .sym{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--bright);letter-spacing:.02em}
+  .dir{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;padding:2px 6px;border-radius:3px}
+  .dir.long{color:var(--long);background:rgba(46,204,143,.1)}
+  .dir.short{color:var(--short);background:rgba(255,92,108,.1)}
+  .px{font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+  /* gates */
+  .gates{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+  .gate{font-family:var(--mono);font-size:10px;letter-spacing:.04em;padding:3px 7px;border-radius:3px;
+        border:1px solid var(--line2);color:var(--dim);display:flex;align-items:center;gap:5px}
+  .gate i{width:6px;height:6px;border-radius:50%;background:var(--line2);display:inline-block}
+  .gate.pass{color:var(--teal);border-color:var(--tealdim)} .gate.pass i{background:var(--teal)}
+  .gate.fail{color:#5a4040;border-color:#3a2630} .gate.fail i{background:var(--short);opacity:.5}
+  .gate.na{color:#5b6470;border-color:var(--line2)} .gate.na i{background:var(--line2)}
+  .venue{font-family:var(--mono);font-size:9px;letter-spacing:.06em;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--dim)}
+  .venue.dx{color:var(--teal);border-color:var(--tealdim)}
+  .venue.dcx{color:var(--amber);border-color:#3a3220}
+  .bar select#venueSel{font-family:var(--mono);font-size:12px;color:var(--txt);background:var(--panel);border:1px solid var(--line2);border-radius:5px;padding:9px 10px}
+  .bar select#venueSel:focus{outline:0;border-color:var(--teal)}
+
+  .levels{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:7px;display:flex;gap:14px;flex-wrap:wrap}
+  .levels b{color:var(--txt);font-weight:500}
+  .levels .e{color:var(--bright)} .levels .t{color:var(--long)} .levels .s{color:var(--short)}
+
+  .act{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+  .act button{padding:7px 11px;font-size:11px}
+
+  .empty{font-family:var(--mono);font-size:12px;color:var(--dim);padding:24px 4px;line-height:1.7}
+  .empty b{color:var(--txt)}
+
+  /* ---- log table ---- */
+  .logwrap{overflow-x:auto;border:1px solid var(--line);border-radius:7px;margin-top:8px}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:11.5px;min-width:560px}
+  th{text-align:left;color:var(--dim);font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:9.5px;
+     padding:9px 11px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:0}
+  td{padding:9px 11px;border-bottom:1px solid var(--line);color:var(--txt);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  .st{font-weight:700;letter-spacing:.04em}
+  .st.OPEN{color:var(--amber)} .st.WIN{color:var(--long)} .st.LOSS{color:var(--short)} .st.AMBIG{color:var(--dim)}
+  .d.long{color:var(--long)} .d.short{color:var(--short)}
+  td .x{color:var(--dim);cursor:pointer;border:0;background:0;font-family:var(--mono);padding:2px 6px}
+  td .x:hover{color:var(--short)}
+
+  .tally{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;padding:10px 0 2px}
+  .chip{border:1px solid var(--line2);border-radius:5px;padding:7px 11px;color:var(--dim)}
+  .chip b{font-size:14px;color:var(--bright);font-weight:700;margin-right:6px}
+  .chip.win b{color:var(--long)} .chip.loss b{color:var(--short)} .chip.open b{color:var(--amber)}
+  .verdict{font-family:var(--mono);font-size:12px;padding:10px 12px;border:1px dashed var(--line2);border-radius:6px;
+           margin-top:10px;color:var(--dim);line-height:1.6}
+  .verdict.live{border-style:solid;border-color:var(--tealdim);color:var(--txt)}
+  .verdict b{color:var(--teal)}
+
+  .foot{font-family:var(--mono);font-size:10px;color:#465062;padding:30px 0 0;line-height:1.7}
+  .foot a{color:#5a6b7a}
+  .err{color:var(--short)}
+  @media(max-width:560px){
+    .card{grid-template-columns:34px 1fr;}
+    .act{grid-column:1/-1;flex-direction:row;margin-top:4px}
+    .act button{flex:1}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="hero">
+      <span class="mark">JDX</span>
+      <h1>Judas&nbsp;Cascade</h1>
+      <span class="sub">Delta&nbsp;India&nbsp;·&nbsp;perpetuals&nbsp;only&nbsp;·&nbsp;v1.0</span>
+    </div>
+    <div class="spec">
+      Fires only when <b>MTF cascade is 4/4</b> + <b>Judas confirmed</b> + <b>funding clean</b> + <b>RSI not exhausted</b>.
+      Top-down scan: 4h&nbsp;&amp;&nbsp;1h checked first, lower timeframes only spent on survivors. Every logged
+      setup resolves to a fixed-RR win or loss — no verdict shown until 30 resolved.
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="bar">
+    <button id="scan" class="go">▶ Scan now</button>
+    <div class="seg" id="showSeg">
+      <button data-show="valid" class="on">VALID only</button>
+      <button data-show="watch">+ WATCH</button>
+    </div>
+    <select id="venueSel" title="Which venue to scan">
+      <option value="DX" selected>Delta</option>
+      <option value="DCX">CoinDCX</option>
+      <option value="BOTH">Both</option>
+    </select>
+    <button id="resolve" class="ghost">Resolve open</button>
+    <button id="logall" class="ghost">Log all VALID</button>
+    <button id="fire" class="ghost">🔔 Alert</button>
+    <button id="stop" class="ghost" disabled>Stop</button>
+  </div>
+
+  <div class="market" id="marketLine"><span class="mk-lbl">MARKET</span> <span class="mk-body" id="marketBody">— run a scan to read regime</span></div>
+
+  <details class="cfg">
+    <summary>Parameters</summary>
+    <div class="grid">
+      <div class="fld"><label>RSI overbought</label><input id="rsiHi" type="number" value="70" step="1"><span class="hint">long blocked above</span></div>
+      <div class="fld"><label>RSI oversold</label><input id="rsiLo" type="number" value="30" step="1"><span class="hint">short blocked below</span></div>
+      <div class="fld"><label>Funding block ±</label><input id="fund" type="number" value="0.3" step="0.05"><span class="hint">in raw funding_rate units ×mult</span></div>
+      <div class="fld"><label>Funding mult</label><input id="fmult" type="number" value="1" step="1"><span class="hint">calibrate vs Delta UI; see raw on card</span></div>
+      <div class="fld"><label>EMA fast</label><input id="emaF" type="number" value="9" step="1"></div>
+      <div class="fld"><label>EMA slow</label><input id="emaS" type="number" value="21" step="1"></div>
+      <div class="fld"><label>Entry timeframe</label>
+        <select id="etf"><option value="15m" selected>15m</option><option value="5m">5m</option></select>
+        <span class="hint">RSI / ATR / Judas read here</span></div>
+      <div class="fld"><label>Asian start (UTC h)</label><input id="asH0" type="number" value="0" min="0" max="23" step="1"></div>
+      <div class="fld"><label>Asian end (UTC h)</label><input id="asH1" type="number" value="6" min="1" max="24" step="1"></div>
+      <div class="fld"><label>RR target</label><input id="rr" type="number" value="2" step="0.5"><span class="hint">target = RR × stop</span></div>
+      <div class="fld"><label>ATR × stop</label><input id="atrM" type="number" value="1.5" step="0.25"></div>
+      <div class="fld"><label>Quote filter</label>
+        <select id="quote"><option value="" selected>any</option><option value="USD">USD</option><option value="USDT">USDT</option></select></div>
+      <div class="fld"><label>Min 24h turnover</label><input id="vol" type="number" value="0" step="100000"><span class="hint">0 = no floor</span></div>
+      <div class="fld"><label>Max symbols</label><input id="cap" type="number" value="120" step="10"><span class="hint">by turnover, desc</span></div>
+      <div class="fld"><label>Concurrency</label><input id="conc" type="number" value="8" min="1" max="16" step="1"></div>
+      <div class="fld"><label>CORS proxy prefix</label><input id="proxy" type="text" value="" placeholder="(leave empty)"><span class="hint">use if a venue blocks your host</span></div>
+      <div class="fld" style="grid-column:1/-1"><label>CoinDCX pairs (optional)</label><input id="dcxList" type="text" value="" placeholder="B-BTC_USDT, B-SOL_USDT, …  (blank = auto / bundled)"><span class="hint">comma-separated; overrides auto-enumeration when CoinDCX blocks it</span></div>
+      <div class="fld"><label>Telegram Bot token</label><input id="tgToken" type="text" value="" placeholder="123456:ABC-..." autocomplete="off"><span class="hint">from @BotFather</span></div>
+      <div class="fld"><label>Telegram Chat ID</label><input id="tgChat" type="text" value="" placeholder="e.g. 87654321" autocomplete="off"><span class="hint">from @userinfobot</span></div>
+      <div class="fld"><label>Auto-fire VALID</label>
+        <select id="tgAuto"><option value="off" selected>off</option><option value="on">on</option></select>
+        <span class="hint">push new VALIDs after each scan (2h cooldown)</span></div>
+      <div class="fld"><label>Auto-fire FORMING</label>
+        <select id="tgForm"><option value="off" selected>off</option><option value="on">on</option></select>
+        <span class="hint">⏳ heads-up alerts (3/4 gates). noisier — off by default</span></div>
+    </div>
+  </details>
+
+  <div class="status" id="status">Idle. Press <b>Scan now</b>.</div>
+  <div class="prog"><i id="progbar"></i></div>
+
+  <div class="tabs" id="tabs">
+    <button data-tab="scanner" class="on">Scanner</button>
+    <button data-tab="forming">⏳ Forming</button>
+    <button data-tab="gold">Gold</button>
+  </div>
+
+  <section class="pane" id="tab-scanner">
+  <div class="cal">
+    <span class="callbl">Search coin</span>
+    <input id="searchSym" type="text" value="SOLUSD" spellcheck="false" placeholder="e.g. SOLUSD">
+    <button id="searchBtn" class="go" style="padding:9px 16px">Analyze</button>
+  </div>
+  <div id="searchResult"></div>
+
+  <div class="lbl">Setups <span class="n" id="setupCount">—</span></div>
+  <div id="results"><div class="empty">No scan yet. Results appear here, <b>VALID</b> first.</div></div>
+
+  <div class="lbl">Outcome log <span class="n" id="logHint">fixed-RR · win/loss</span></div>
+  <div class="tally" id="tally"></div>
+  <div class="verdict" id="verdict">Log setups to start building a sample.</div>
+  <div class="bar">
+    <button id="bak" class="ghost">⤓ Backup (BAK)</button>
+    <button id="rst" class="ghost">⤒ Restore (RST)</button>
+    <button id="clr" class="ghost">Clear log…</button>
+    <input id="rstFile" type="file" accept="application/json" style="display:none">
+  </div>
+  <div class="logwrap" id="logwrap"><table id="logtbl"><thead><tr>
+    <th>Sym</th><th>Dir</th><th>Logged</th><th>Entry</th><th>SL</th><th>TP</th><th>RR</th><th>Status</th><th>Bars</th><th></th>
+  </tr></thead><tbody id="logbody"></tbody></table></div>
+  </section>
+
+  <section class="pane" id="tab-forming" hidden>
+    <div class="lbl">Forming — one gate from VALID <span class="n" id="formCount">top 10</span></div>
+    <div class="note">Pre-VALID watchlist: 3 of the 4 gates already pass. These are <b>heads-ups, not triggers</b> — wait for the 4th gate (usually JUDAS) to confirm before treating it as a setup. ⏳ alerts fire when a coin enters this list.</div>
+    <div id="formingResults"><div class="empty">No scan yet. Run a scan — forming setups appear here, top 10.</div></div>
+  </section>
+
+  <section class="pane" id="tab-gold" hidden>
+    <div class="lbl">Gold <span class="n">tokenized-gold proxy · same logic</span></div>
+    <div class="note">Spot XAUUSD intraday candles aren't reachable from a no-backend browser. This runs the same 4-gate logic on <b>tokenized gold (XAUT)</b> as a perp — it tracks spot gold closely. If your venue lists gold differently, edit the symbol (try <b>XAUTUSD</b>, <b>XAUT_USDT</b>, or <b>B-XAUT_USDT</b> for CoinDCX).</div>
+    <div class="cal">
+      <span class="callbl">Gold symbol</span>
+      <input id="goldSym" type="text" value="XAUTUSD" spellcheck="false" placeholder="XAUTUSD">
+      <button id="goldBtn" class="go" style="padding:9px 16px">Analyze gold</button>
+    </div>
+    <div id="goldResult"><div class="empty">Tap <b>Analyze gold</b> — cascade + Judas + RSI with SL/TP.</div></div>
+  </section>
+
+  <div class="foot">
+    Data: api.india.delta.exchange &amp; CoinDCX public endpoints (no auth). Funding read from ticker <i>funding_rate</i> (Delta) — CoinDCX funding is usually unavailable, so those cap at WATCH. Judas = Asian-range sweep + reclaim in the cascade direction. Outcome resolution walks entry-TF candles forward from log time; a bar touching both stop and target is flagged AMBIG and counted as a loss. Forming alerts fire on incomplete confluence and are heads-ups only. Gold uses a tokenized-gold (XAUT) proxy, not spot. Nothing here is advice.
+  </div>
+</div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const BASE="https://api.india.delta.exchange";
+const TF_SEC={"5m":300,"15m":900,"1h":3600,"4h":14400};
+const LSK="dx_judas_logs_v1", CFK="dx_judas_cfg_v1";
+
+let scanning=false, abort=false, showMode="valid", lastSetups=[];
+
+/* ---------- config persistence ---------- */
+const CFG_IDS=["rsiHi","rsiLo","fund","fmult","emaF","emaS","etf","asH0","asH1","rr","atrM","quote","vol","cap","conc","proxy","dcxList","venueSel","tgToken","tgChat","tgAuto","tgForm","goldSym"];
+function loadCfg(){try{const c=JSON.parse(localStorage.getItem(CFK)||"{}");CFG_IDS.forEach(k=>{if(c[k]!=null&&$(k))$(k).value=c[k];});}catch(e){}}
+function saveCfg(){const c={};CFG_IDS.forEach(k=>c[k]=$(k).value);localStorage.setItem(CFK,JSON.stringify(c));}
+function cfg(){return {
+  rsiHi:+$("rsiHi").value, rsiLo:+$("rsiLo").value, fund:+$("fund").value, fmult:+$("fmult").value,
+  emaF:+$("emaF").value|0, emaS:+$("emaS").value|0, etf:$("etf").value,
+  asH0:+$("asH0").value, asH1:+$("asH1").value, rr:+$("rr").value, atrM:+$("atrM").value,
+  quote:$("quote").value, vol:+$("vol").value, cap:+$("cap").value|0, conc:Math.max(1,+$("conc").value|0), proxy:$("proxy").value.trim(),
+  venue:$("venueSel").value
+};}
+
+/* ---------- indicators ---------- */
+function ema(vals,p){if(vals.length<p)return null;const k=2/(p+1);let e=vals.slice(0,p).reduce((a,b)=>a+b,0)/p;for(let i=p;i<vals.length;i++)e=vals[i]*k+e*(1-k);return e;}
+function rsi(closes,p=14){if(closes.length<p+1)return null;let g=0,l=0;for(let i=1;i<=p;i++){const d=closes[i]-closes[i-1];if(d>=0)g+=d;else l-=d;}g/=p;l/=p;for(let i=p+1;i<closes.length;i++){const d=closes[i]-closes[i-1];g=(g*(p-1)+(d>0?d:0))/p;l=(l*(p-1)+(d<0?-d:0))/p;}if(l===0)return 100;return 100-100/(1+g/l);}
+function atr(c,p=14){if(c.length<p+1)return null;const tr=[];for(let i=1;i<c.length;i++){const h=c[i].high,lo=c[i].low,pc=c[i-1].close;tr.push(Math.max(h-lo,Math.abs(h-pc),Math.abs(lo-pc)));}let a=tr.slice(0,p).reduce((x,y)=>x+y,0)/p;for(let i=p;i<tr.length;i++)a=(a*(p-1)+tr[i])/p;return a;}
+function trendDir(c,f,s){const cl=c.map(k=>k.close);const ef=ema(cl,f),es=ema(cl,s);if(ef==null||es==null)return 0;return ef>es?1:ef<es?-1:0;}
+
+/* ---------- fetch ---------- */
+async function jget(url,tries=3,fallbackProxy=""){
+  const px=cfg().proxy||fallbackProxy; const u=px?px+encodeURIComponent(url):url;
+  for(let i=0;i<tries;i++){
+    if(abort)throw new Error("aborted");
+    try{
+      const r=await fetch(u,{headers:{"Accept":"application/json"}});
+      if(r.status===429){await sleep(600*(i+1));continue;}
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return await r.json();
+    }catch(e){ if(i===tries-1)throw e; await sleep(400*(i+1)); }
+  }
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function tickers(){
+  const j=await jget(BASE+"/v2/tickers?contract_types=perpetual_futures");
+  const arr=(j&&j.result)||[];
+  return arr.filter(t=> t&&t.symbol && (t.contract_type? t.contract_type==="perpetual_futures": ("funding_rate"in t)) );
+}
+async function candles(sym,res,bars=210){
+  const sec=TF_SEC[res], end=Math.floor(Date.now()/1000), start=end-sec*bars;
+  const j=await jget(`${BASE}/v2/history/candles?resolution=${res}&symbol=${encodeURIComponent(sym)}&start=${start}&end=${end}`);
+  let r=(j&&j.result)||[];
+  // normalise to {time,open,high,low,close,volume} ascending
+  r=r.map(c=>Array.isArray(c)
+      ?{time:+c[0],open:+c[1],high:+c[2],low:+c[3],close:+c[4],volume:+c[5]}
+      :{time:+c.time,open:+c.open,high:+c.high,low:+c.low,close:+c.close,volume:+(c.volume||0)});
+  r.sort((a,b)=>a.time-b.time);
+  return r;
+}
+
+/* ---------- Judas (Asian range sweep + reclaim) ---------- */
+function judas(c,h0,h1,dir){
+  if(!c.length)return {ok:false,note:"no data"};
+  const now=new Date(c[c.length-1].time*1000);
+  // today's UTC Asian window
+  const y=now.getUTCFullYear(),m=now.getUTCMonth(),d=now.getUTCDate();
+  let w0=Date.UTC(y,m,d,h0)/1000, w1=Date.UTC(y,m,d,h1)/1000;
+  if(w1<=w0)w1+=86400;
+  const inWin=c.filter(k=>k.time>=w0&&k.time<w1);
+  if(inWin.length<2)return {ok:false,note:"Asian range forming"};
+  const aHi=Math.max(...inWin.map(k=>k.high)), aLo=Math.min(...inWin.map(k=>k.low));
+  const post=c.filter(k=>k.time>=w1);
+  if(!post.length)return {ok:false,note:"pre-London"};
+  const cur=post[post.length-1].close;
+  if(dir>0){ const swept=Math.min(...post.map(k=>k.low))<aLo; return {ok:swept&&cur>aLo, note:swept?(cur>aLo?"swept↓ reclaimed":"below range"):"no sweep", aHi,aLo}; }
+  if(dir<0){ const swept=Math.max(...post.map(k=>k.high))>aHi; return {ok:swept&&cur<aHi, note:swept?(cur<aHi?"swept↑ rejected":"above range"):"no sweep", aHi,aLo}; }
+  return {ok:false,note:"no dir"};
+}
+
+/* ---------- scan ---------- */
+async function pool(items,n,fn,onTick){
+  const q=items.slice(); let done=0; const out=[];
+  async function worker(){ while(q.length){ if(abort)return; const it=q.shift(); try{const r=await fn(it); if(r)out.push(r);}catch(e){} done++; onTick(done); } }
+  await Promise.all(Array.from({length:Math.min(n,items.length)},worker));
+  return out;
+}
+
+/* ---------- CoinDCX futures ---------- */
+const DCX_PUB="https://public.coindcx.com", DCX_API="https://api.coindcx.com";
+const DCX_PROXIES=["https://corsproxy.io/?url=","https://api.allorigins.win/raw?url="]; // tried in turn if direct fails
+let dcxFundingDead=false;
+// Bundled fallback list of CoinDCX USDT-margined futures (B- ecode). Used only when the live
+// active_instruments endpoint is blocked. CoinDCX lists 220+; this covers the liquid majority.
+// Names that don't match are skipped automatically. For the complete live set, a working proxy
+// (or the CoinDCX-pairs field) is required.
+const DCX_PAIRS=("BTC ETH SOL XRP BNB DOGE ADA AVAX LINK DOT POL MATIC LTC BCH TRX NEAR APT ARB OP SUI INJ TIA SEI "+
+"FIL ATOM UNI AAVE ETC XLM ICP HBAR RNDR RENDER FET ALGO ORDI GALA SAND DYDX CRV LDO ENA JUP PYTH STX WLD TON TAO NMR "+
+"WIF 1000PEPE PEPE 1000SHIB SHIB 1000BONK BONK 1000FLOKI FLOKI 1000RATS 1000SATS MANA AXS CHZ ENJ APE GRT SNX COMP MKR "+
+"SUSHI YFI 1INCH ZRX KSM EGLD THETA EOS XTZ NEO IOTA DASH ZEC XMR QTUM WAVES KAVA ROSE ONE ZIL ANKR BAT CELO SKL OCEAN "+
+"BAND STORJ CTSI RSR RUNE LUNA LUNC USTC AR HNT KAS BLUR JTO PIXEL PORTAL STRK DYM ALT MANTA ONDO AEVO ETHFI ZK ZRO "+
+"BLAST IO REZ NOT BB LISTA OMNI W TNSR SAGA TAIKO POPCAT MEW MOODENG NEIRO TURBO PNUT ACT GOAT PEOPLE ARKM AI16Z "+
+"FARTCOIN VIRTUAL ETHW ENS MASK GMX SSV HOOK ID HIGH MAGIC RDNT SPELL JOE GLMR ASTR ACH OG PROM POWR API3 LQTY UMA "+
+"FXS C98 LRC IMX FLOW TRB BNX JASMY GMT WOO CFX KLAY MINA FLM CYBER ARK AGLD HMSTR CATI EIGEN SCR LUMIA MOVE ME USUAL "+
+"PENGU VANA VELODROME AERO MORPHO GRASS DRIFT RAY ZETA BIO COW KAITO BERA LAYER IP NIL").trim().split(/\s+/).map(s=>"B-"+s+"_USDT");
+
+// try direct first (public host is usually CORS-open), then each proxy in turn
+async function dcxTry(url){
+  try{ return await jget(url,1); }catch(e){}
+  for(const px of DCX_PROXIES){ try{ return await jget(url,1,px); }catch(e){} }
+  throw new Error("all routes blocked");
+}
+
+async function dcxInstruments(){
+  try{
+    const j=await dcxTry(DCX_API+"/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=USDT");
+    let a=Array.isArray(j)?j:((j&&(j.instruments||j.result))||[]);
+    a=a.map(x=>typeof x==="string"?x:(x.pair||x.symbol)).filter(Boolean);
+    return a;
+  }catch(e){ return []; }   // caller falls back to bundled/custom list
+}
+async function dcxCandles(pair,res){
+  const j=await dcxTry(`${DCX_PUB}/market_data/candles?pair=${encodeURIComponent(pair)}&interval=${res}&limit=300`);
+  let r=Array.isArray(j)?j:((j&&j.result)||[]);
+  r=r.map(c=>({time:Math.floor((+c.time)/1000),open:+c.open,high:+c.high,low:+c.low,close:+c.close,volume:+(c.volume||0)}));
+  r.sort((a,b)=>a.time-b.time);
+  return r;
+}
+async function dcxFunding(pair){
+  if(dcxFundingDead)return null;
+  try{
+    const j=await dcxTry(`${DCX_API}/exchange/v1/derivatives/futures/data/instrument?pair=${encodeURIComponent(pair)}&margin_currency_short_name=USDT`);
+    const o=(j&&(j.instrument||j))||{};
+    const f=o.funding_rate??o.current_funding_rate??o.estimated_funding_rate;
+    return (f!=null&&!isNaN(+f))?+f:null;
+  }catch(e){ dcxFundingDead=true; return null; }
+}
+
+/* venue-aware candle + meta */
+async function vCandles(item,res){ return item.venue==="DCX"?dcxCandles(item.sym,res):candles(item.sym,res); }
+async function buildMeta(item){
+  if(item.venue==="DCX"){ const f=await dcxFunding(item.sym); return {sym:item.sym,venue:"DCX",funding:f,px:null}; }
+  const t=item.ticker||{};
+  return {sym:item.sym,venue:"DX",funding:(t.funding_rate!=null?+t.funding_rate:null),px:+(t.mark_price??t.close??t.last_price)};
+}
+
+/* ---------- per-symbol setup (shared by scan + search, both venues) ---------- */
+// meta: {sym, venue:'DX'|'DCX', funding:(raw number|null), px:(number|null)}
+function computeSetup(meta,C,c4,c1,c15,c5){
+  if(c4.length<C.emaS+2||c1.length<C.emaS+2||c15.length<C.emaS+2||c5.length<C.emaS+2)return null;
+  const d4=trendDir(c4,C.emaF,C.emaS),d1=trendDir(c1,C.emaF,C.emaS),d15=trendDir(c15,C.emaF,C.emaS),d5=trendDir(c5,C.emaF,C.emaS);
+  const dirs=[d4,d1,d15,d5];
+  const sum=dirs.reduce((a,b)=>a+b,0);
+  const dir=d4||(sum>=0?1:-1);                       // HTF anchor; majority if 4h flat
+  const score=dirs.filter(x=>x===dir).length;
+  const entryC=C.etf==="5m"?c5:c15;
+  const px=+((meta.px!=null&&!isNaN(meta.px))?meta.px:entryC[entryC.length-1].close);
+  const r=rsi(entryC.map(k=>k.close)),a=atr(entryC);
+  const j=judas(entryC,C.asH0,C.asH1,dir);
+  const fundKnown=meta.funding!=null&&!isNaN(meta.funding);
+  const fr=fundKnown?meta.funding*C.fmult:null;
+  const fundGate=!fundKnown?'na':(dir>0?fr<=C.fund:fr>=-C.fund);   // true / false / 'na'
+  const rsiOk=dir>0?(r!=null&&r<C.rsiHi):(r!=null&&r>C.rsiLo);
+  const cascadeOk=score===4;
+  const gates={cascade:cascadeOk,judas:j.ok,funding:fundGate,rsi:rsiOk};
+  const valid=cascadeOk&&j.ok&&(fundGate===true)&&rsiOk;          // n/a funding can never be VALID
+  const stopD=a!=null?a*C.atrM:px*0.005;
+  const entry=px,stop=dir>0?entry-stopD:entry+stopD,target=dir>0?entry+stopD*C.rr:entry-stopD*C.rr;
+  return {sym:meta.sym,venue:meta.venue||'DX',dir,dirs,score,px,rsi:r,atr:a,fundingRaw:fundKnown?meta.funding:null,
+          funding:fr,fundKnown,judasNote:j.note,gates,valid,entry,stop,target,rr:C.rr,etf:C.etf};
+}
+
+/* ---------- search one coin ---------- */
+async function analyzeInto(sym,hostId){
+  const C=cfg(); const host=$(hostId);
+  host.innerHTML='<div class="empty">Analyzing <b>'+sym+'</b>…</div>';
+  const isDcx=/[-_]/.test(sym);   // CoinDCX pairs look like B-BTC_USDT
+  try{
+    let meta, c4,c1,c15,c5;
+    if(isDcx){
+      [c4,c1,c15,c5]=await Promise.all([dcxCandles(sym,"4h"),dcxCandles(sym,"1h"),dcxCandles(sym,"15m"),dcxCandles(sym,"5m")]);
+      meta={sym,venue:"DCX",funding:await dcxFunding(sym),px:null};
+    }else{
+      let t=null; try{const j=await jget(BASE+"/v2/tickers/"+encodeURIComponent(sym)); t=j&&j.result;}catch(e){}
+      [c4,c1,c15,c5]=await Promise.all([candles(sym,"4h"),candles(sym,"1h"),candles(sym,"15m"),candles(sym,"5m")]);
+      meta={sym,venue:"DX",funding:(t&&t.funding_rate!=null?+t.funding_rate:null),px:t?+(t.mark_price??t.close??t.last_price):null};
+    }
+    const s=computeSetup(meta,C,c4,c1,c15,c5);
+    if(!s){host.innerHTML='<div class="empty"><b>'+sym+'</b>: not enough candle data. Check the symbol.</div>';return;}
+    host.innerHTML=cardHTML(s);
+  }catch(e){host.innerHTML='<div class="empty"><span class="err">'+sym+': '+e.message+'</span></div>';}
+}
+function analyzeOne(){const s=$("searchSym").value.trim().toUpperCase(); if(s)analyzeInto(s,"searchResult");}
+function analyzeGold(){const s=$("goldSym").value.trim().toUpperCase(); if(s)analyzeInto(s,"goldResult");}
+
+/* ---------- market direction ---------- */
+async function computeMarket(C){
+  try{
+    const [c4,c1,c15,c5]=await Promise.all([candles("BTCUSD","4h"),candles("BTCUSD","1h"),candles("BTCUSD","15m"),candles("BTCUSD","5m")]);
+    const dirs=[trendDir(c4,C.emaF,C.emaS),trendDir(c1,C.emaF,C.emaS),trendDir(c15,C.emaF,C.emaS),trendDir(c5,C.emaF,C.emaS)];
+    const bulls=dirs.filter(x=>x>0).length, bears=dirs.filter(x=>x<0).length;
+    MK.arrows=dirs.map(d=>d>0?"▲":d<0?"▼":"–").join(" ");
+    if(bulls>=3){MK.regime="risk-on · BTC up";MK.cls="up";}
+    else if(bears>=3){MK.regime="risk-off · BTC down";MK.cls="dn";}
+    else{MK.regime="mixed / chop — trade light";MK.cls="mix";}
+    paintMarket();
+  }catch(e){}
+}
+const MK={arrows:"– – – –",regime:"—",cls:"mix",breadth:""};
+function paintMarket(){
+  $("marketBody").innerHTML=`BTC 4h/1h/15m/5m <b class="mk-${MK.cls}">${MK.arrows}</b> — ${MK.regime}${MK.breadth?" · "+MK.breadth:""}`;
+}
+
+/* ---------- forming (pre-VALID watchlist) ---------- */
+function formingList(){
+  return lastSetups.filter(s=>!s.valid && gp(s)>=3)        // 3 of 4 gates pass, one from VALID
+    .sort((a,b)=> gp(b)-gp(a) || b.score-a.score)
+    .slice(0,10);
+}
+function renderForming(){
+  const host=$("formingResults"); const list=formingList();
+  $("formCount").textContent=list.length?("top "+list.length):"0";
+  host.innerHTML=list.length? list.map(cardHTML).join("")
+    : '<div class="empty">No forming setups (3/4 gates) this pass.</div>';
+}
+async function autoFireForming(list){
+  if($("tgForm").value!=="on"||!list.length)return;
+  const key="dx_judas_tgform"; let seen={}; try{seen=JSON.parse(localStorage.getItem(key)||"{}");}catch(e){}
+  const now=Date.now(), cd=120*60*1000;
+  const fresh=list.filter(s=>{const k=s.venue+"|"+s.sym+"|"+s.dir; return !seen[k]||now-seen[k]>cd;});
+  if(!fresh.length)return;
+  const lines=fresh.map(s=>{const miss=Object.keys(s.gates).filter(k=>s.gates[k]!==true).map(k=>k.toUpperCase()).join(", ");
+    return `<b>${s.sym}</b> · ${s.venue==="DCX"?"CoinDCX":"Delta"} · ${s.dir>0?"LONG":"SHORT"} ${s.score}/4 — waiting: ${miss}`;});
+  if(await tgSend(`⏳ <b>FORMING — ${fresh.length}</b> (heads-up, not a trigger)\n\n`+lines.join("\n"))){
+    fresh.forEach(s=>seen[s.venue+"|"+s.sym+"|"+s.dir]=now); localStorage.setItem(key,JSON.stringify(seen));
+  }
+}
+
+async function scan(){
+  if(scanning)return; scanning=true; abort=false; lastSetups=[];
+  $("scan").disabled=true; $("stop").disabled=false; saveCfg();
+  const C=cfg();
+  const venue=C.venue||"DX";
+  prog(0); computeMarket(C);
+  let items=[];
+
+  // ---- Delta universe ----
+  if(venue==="DX"||venue==="BOTH"){
+    setStatus("Loading Delta perp universe…");
+    try{
+      const uni=await tickers();
+      const volOf=t=>+(t.turnover_usd??t.turnover??t.volume??0);
+      let list=uni.filter(t=>!C.quote||(t.symbol||"").toUpperCase().endsWith(C.quote)).filter(t=>volOf(t)>=C.vol);
+      list.sort((a,b)=>volOf(b)-volOf(a));
+      if(C.cap>0)list=list.slice(0,C.cap);
+      items=items.concat(list.map(t=>({sym:t.symbol,venue:"DX",ticker:t})));
+    }catch(e){ setStatus(`<span class="err">Delta load failed: ${e.message}.</span> Set a CORS proxy prefix if your host blocks Delta.`); if(venue==="DX")return finish(); }
+  }
+
+  // ---- CoinDCX universe (candles only; funding usually n/a -> WATCH max) ----
+  if(venue==="DCX"||venue==="BOTH"){
+    setStatus("Loading CoinDCX futures universe…");
+    let pairs=[]; let src="";
+    const custom=($("dcxList").value||"").trim();
+    if(custom){ pairs=custom.split(/[\s,]+/).map(s=>s.toUpperCase()).filter(Boolean); src="your list"; }
+    else{
+      try{ pairs=await dcxInstruments(); }catch(e){}
+      if(pairs.length) src="live list";
+      else { pairs=DCX_PAIRS.slice(); src="bundled list (enumeration blocked)"; }
+    }
+    if(C.quote)pairs=pairs.filter(p=>p.toUpperCase().endsWith("_"+C.quote)||p.toUpperCase().endsWith(C.quote));
+    if(C.cap>0)pairs=pairs.slice(0,C.cap);
+    items=items.concat(pairs.map(p=>({sym:p,venue:"DCX"})));
+    setStatus(`CoinDCX: ${pairs.length} pairs from ${src}. Scanning…`);
+  }
+
+  if(!items.length){ setStatus("No symbols matched filters / venue unreachable."); return finish(); }
+
+  setStatus(`Scanning <b>${items.length}</b> contracts — 4h/1h first…`);
+  let processed=0; const total=items.length;
+  const tick=()=>{ prog(processed/total); };
+
+  const setups=await pool(items,C.conc,async(item)=>{
+    // top-down short-circuit: spend 15m/5m only on HTF-aligned survivors
+    const c4=await vCandles(item,"4h"); if(c4.length<C.emaS+2)return null;
+    const d4=trendDir(c4,C.emaF,C.emaS); if(!d4)return null;
+    const c1=await vCandles(item,"1h"); if(c1.length<C.emaS+2)return null;
+    if(trendDir(c1,C.emaF,C.emaS)!==d4)return null;            // HTF disagree → drop
+    const c15=await vCandles(item,"15m"); if(c15.length<C.emaS+2)return null;
+    const c5=await vCandles(item,"5m"); if(c5.length<C.emaS+2)return null;
+    const meta=await buildMeta(item);
+    const s=computeSetup(meta,C,c4,c1,c15,c5);
+    return (s&&s.score>=3)?s:null;                             // surface 3/4+ only
+  },(d)=>{processed=d;tick();});
+
+  // sort: valid first, then by gates passed, then score
+  setups.sort((a,b)=> (b.valid-a.valid) || (gp(b)-gp(a)) || (b.score-a.score));
+  lastSetups=setups;
+  render(); renderForming();
+  const longs=setups.filter(s=>s.dir>0).length, pctL=setups.length?Math.round(longs/setups.length*100):0;
+  MK.breadth=`${pctL}% of ${setups.length} setups long`; paintMarket();
+  const nv=setups.filter(s=>s.valid).length;
+  setStatus(abort?`Stopped. Scanned ${processed}/${total}.`:`Done. <b>${nv}</b> VALID · ${setups.length-nv} watch · ${total} scanned.`);
+  prog(1); finish();
+  if(!abort){ autoFireIfOn(setups.filter(s=>s.valid)); autoFireForming(formingList()); }
+}
+const gp=s=>Object.values(s.gates).filter(x=>x===true).length;
+function finish(){scanning=false;$("scan").disabled=false;$("stop").disabled=true;return;}
+function setStatus(h){$("status").innerHTML=h;}
+function prog(f){$("progbar").style.width=Math.round(f*100)+"%";}
+
+/* ---------- render setups ---------- */
+const RUNG=[["4h",0],["1h",1],["15m",2],["5m",3]];
+function render(){
+  const host=$("results");
+  const show=lastSetups.filter(s=> showMode==="valid"? s.valid : (s.valid|| (s.score===4)) );
+  $("setupCount").textContent=show.length? show.length : "0";
+  if(!lastSetups.length){host.innerHTML='<div class="empty">No scan yet.</div>';return;}
+  if(!show.length){
+    host.innerHTML=`<div class="empty">No ${showMode==="valid"?"VALID":"qualifying"} setups this pass. ${showMode==="valid"?'Try <b>+ WATCH</b> to see 4/4 cascades that missed one gate.':''}</div>`;
+    return;
+  }
+  host.innerHTML=show.map(cardHTML).join("");
+}
+function cardHTML(s){
+  const dl=s.dir>0?"long":"short";
+  const ladder=RUNG.map(([lab,i])=>{const v=s.dirs[i];const cls=v>0?"up":v<0?"dn":"";return `<div class="rung ${cls}"><span class="tick">${lab}</span></div>`;}).join("");
+  const g=(k,lab,extra)=>{const st=s.gates[k];const cls=st==="na"?"na":(st?"pass":"fail");return `<span class="gate ${cls}"><i></i>${lab}${extra?" "+extra:""}</span>`;};
+  const fr=s.fundKnown?(s.funding>=0?"+"+s.funding.toFixed(3):s.funding.toFixed(3)):"n/a";
+  const slPct=Math.abs((s.stop/s.entry-1)*100), tpPct=Math.abs((s.target/s.entry-1)*100);
+  const badge=s.valid?'<span class="dir" style="color:var(--teal);background:var(--tealdim)">VALID</span>'
+                      :'<span class="dir" style="color:var(--dim);background:#161b22">'+s.score+'/4</span>';
+  const ven=`<span class="venue ${s.venue==='DCX'?'dcx':'dx'}">${s.venue==='DCX'?'CoinDCX':'Delta'}</span>`;
+  return `<div class="card ${dl} ${s.valid?"valid":""}">
+    <div class="ladder">${ladder}</div>
+    <div class="mid">
+      <div class="symrow">
+        <span class="sym">${s.sym}</span>
+        <span class="dir ${dl}">${dl.toUpperCase()}</span>
+        ${ven}
+        <span class="px">${fmt(s.px)}</span>
+        ${badge}
+      </div>
+      <div class="gates">
+        ${g("cascade","CASCADE",s.score+"/4")}
+        ${g("judas","JUDAS",s.gates.judas?"":"·"+s.judasNote)}
+        ${g("funding","FUNDING",fr)}
+        ${g("rsi","RSI",s.rsi!=null?s.rsi.toFixed(0):"–")}
+      </div>
+      <div class="levels">
+        <span>Entry <b class="e">${fmt(s.entry)}</b></span>
+        <span>SL <b class="s">${fmt(s.stop)}</b> <span class="pct">${slPct.toFixed(2)}%</span></span>
+        <span>TP <b class="t">${fmt(s.target)}</b> <span class="pct">${tpPct.toFixed(2)}%</span></span>
+        <span>${s.rr}R</span>
+      </div>
+    </div>
+    <div class="act">
+      <button onclick='logSetup(${JSON.stringify(JSON.stringify(slim(s)))})'>Log ${dl}</button>
+    </div>
+  </div>`;
+}
+function slim(s){return {sym:s.sym,venue:s.venue||"DX",dir:s.dir,entry:s.entry,stop:s.stop,target:s.target,rr:s.rr,etf:s.etf};}
+function fmt(n){if(n==null||isNaN(n))return "–";const a=Math.abs(n);const d=a>=1000?2:a>=1?3:a>=0.01?5:8;return n.toFixed(d);}
+
+/* ---------- log + resolution ---------- */
+function getLogs(){try{return JSON.parse(localStorage.getItem(LSK)||"[]");}catch(e){return[];}}
+function setLogs(l){localStorage.setItem(LSK,JSON.stringify(l));renderLogs();}
+function logSetup(js){
+  const s=JSON.parse(JSON.parse(js));
+  const logs=getLogs();
+  logs.unshift({id:Date.now()+"_"+Math.random().toString(36).slice(2,7),sym:s.sym,venue:s.venue||"DX",dir:s.dir,
+    entry:s.entry,stop:s.stop,target:s.target,rr:s.rr,etf:s.etf,ts:Math.floor(Date.now()/1000),status:"OPEN",bars:0});
+  setLogs(logs); setStatus(`Logged <b>${s.sym}</b> ${s.dir>0?"long":"short"} @ ${fmt(s.entry)}.`);
+}
+function logAllValid(){
+  const valid=lastSetups.filter(s=>s.valid);
+  if(!valid.length){setStatus("No VALID setups to log. Scan first.");return;}
+  const logs=getLogs();
+  const openKey=new Set(logs.filter(l=>l.status==="OPEN").map(l=>l.sym+"|"+l.dir));
+  let added=0,skipped=0;
+  valid.forEach(s=>{
+    if(openKey.has(s.sym+"|"+s.dir)){skipped++;return;}   // already an open trade on this sym+dir
+    logs.unshift({id:Date.now()+"_"+Math.random().toString(36).slice(2,7),sym:s.sym,venue:s.venue||"DX",dir:s.dir,
+      entry:s.entry,stop:s.stop,target:s.target,rr:s.rr,etf:s.etf,ts:Math.floor(Date.now()/1000),status:"OPEN",bars:0});
+    added++;
+  });
+  setLogs(logs);
+  setStatus(`Logged <b>${added}</b> VALID${skipped?` · ${skipped} already open, skipped`:""}.`);
+}
+async function resolveOpen(){
+  const logs=getLogs(); const open=logs.filter(l=>l.status==="OPEN");
+  if(!open.length){setStatus("No open setups to resolve.");return;}
+  setStatus(`Resolving ${open.length} open…`);
+  for(const l of open){
+    if(abort)break;
+    try{
+      const res0=l.etf||"15m"; const sec=TF_SEC[res0]; const need=Math.ceil((Date.now()/1000 - l.ts)/sec)+5;
+      const n=Math.min(Math.max(need,30),2000);
+      const c=l.venue==="DCX"?await dcxCandles(l.sym,res0):await candles(l.sym,res0,n);
+      const path=c.filter(k=>k.time>=l.ts);
+      let res=null,bars=0;
+      for(const k of path){ bars++;
+        const hitT=l.dir>0? k.high>=l.target : k.low<=l.target;
+        const hitS=l.dir>0? k.low<=l.stop   : k.high>=l.stop;
+        if(hitT&&hitS){res="AMBIG";break;} if(hitT){res="WIN";break;} if(hitS){res="LOSS";break;}
+      }
+      if(res){l.status=res;l.bars=bars;l.exitTs=Math.floor(Date.now()/1000);}
+      else l.bars=bars;
+    }catch(e){}
+  }
+  setLogs(logs);
+  const r=logs.filter(l=>l.status!=="OPEN").length;
+  setStatus(`Resolved pass complete. ${r} closed, ${logs.filter(l=>l.status==="OPEN").length} still open.`);
+}
+function renderLogs(){
+  const logs=getLogs();
+  $("logbody").innerHTML=logs.map(l=>`<tr>
+    <td>${l.sym}</td>
+    <td class="d ${l.dir>0?"long":"short"}">${l.dir>0?"L":"S"}</td>
+    <td>${new Date(l.ts*1000).toLocaleString([], {month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</td>
+    <td>${fmt(l.entry)}</td><td>${fmt(l.stop)}</td><td>${fmt(l.target)}</td><td>${l.rr}R</td>
+    <td class="st ${l.status}">${l.status}</td><td>${l.bars||0}</td>
+    <td><button class="x" onclick="delLog('${l.id}')">✕</button></td>
+  </tr>`).join("")||`<tr><td colspan="10" style="color:var(--dim)">Empty. Log a setup above.</td></tr>`;
+  // tally
+  const win=logs.filter(l=>l.status==="WIN").length, loss=logs.filter(l=>l.status==="LOSS"||l.status==="AMBIG").length, op=logs.filter(l=>l.status==="OPEN").length;
+  const res=win+loss;
+  $("tally").innerHTML=`<span class="chip win"><b>${win}</b>win</span><span class="chip loss"><b>${loss}</b>loss</span><span class="chip open"><b>${op}</b>open</span><span class="chip"><b>${res}</b>resolved</span>`;
+  const v=$("verdict");
+  if(res<30){ v.className="verdict"; v.innerHTML=`Sample building — <b>${res}/30</b> resolved. No win-rate or expectancy verdict until 30 (your standing rule).`; }
+  else{ const wr=win/res, rr=logs.length?(logs[0].rr||2):2; const exp=wr*rr-(1-wr); v.className="verdict live";
+    v.innerHTML=`N=<b>${res}</b> · win rate <b>${(wr*100).toFixed(1)}%</b> · avg <b>${(logs.reduce((a,l)=>a+(l.rr||2),0)/logs.length).toFixed(2)}R</b> target · expectancy ≈ <b>${exp>=0?"+":""}${exp.toFixed(2)}R</b> per trade <span style="color:var(--dim)">(AMBIG counted as loss)</span>.`; }
+}
+function delLog(id){const logs=getLogs().filter(l=>l.id!==id);setLogs(logs);}
+
+/* ---------- Telegram alerts ---------- */
+async function tgSend(text){
+  const tok=$("tgToken").value.trim(), chat=$("tgChat").value.trim();
+  if(!tok||!chat){ setStatus('<span class="err">Set Telegram Bot token + Chat ID in Parameters first.</span>'); return false; }
+  try{
+    const r=await fetch(`https://api.telegram.org/bot${tok}/sendMessage`,{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({chat_id:chat, text, parse_mode:"HTML", disable_web_page_preview:true})});
+    const j=await r.json();
+    if(!j.ok){ setStatus('<span class="err">Telegram: '+(j.description||("HTTP "+r.status))+'</span>'); return false; }
+    return true;
+  }catch(e){ setStatus('<span class="err">Telegram send failed: '+e.message+'</span>'); return false; }
+}
+function tgFormat(list){
+  const lines=list.map(s=>{
+    const d=s.dir>0?"🟢 LONG":"🔴 SHORT", v=s.venue==="DCX"?"CoinDCX":"Delta";
+    return `<b>${s.sym}</b> · ${v} · ${d}\nEntry ${fmt(s.entry)} | SL ${fmt(s.stop)} | TP ${fmt(s.target)} (${s.rr}R)`;
+  });
+  return `⚡ <b>JUDAS CASCADE — ${list.length} VALID</b>\n\n`+lines.join("\n\n");
+}
+async function fireAlert(){
+  const v=lastSetups.filter(s=>s.valid);
+  if(!v.length){ setStatus("No VALID setups to alert — scan first."); return; }
+  if(await tgSend(tgFormat(v))) setStatus(`🔔 Sent ${v.length} VALID to Telegram.`);
+}
+async function autoFireIfOn(valids){
+  if(($("tgAuto").value)!=="on"||!valids.length)return;
+  const key="dx_judas_tgalert"; let seen={}; try{seen=JSON.parse(localStorage.getItem(key)||"{}");}catch(e){}
+  const now=Date.now(), cd=120*60*1000;                       // 2h cooldown per sym+dir
+  const fresh=valids.filter(s=>{const k=s.venue+"|"+s.sym+"|"+s.dir; return !seen[k]||now-seen[k]>cd;});
+  if(!fresh.length)return;
+  if(await tgSend(tgFormat(fresh))){ fresh.forEach(s=>seen[s.venue+"|"+s.sym+"|"+s.dir]=now); localStorage.setItem(key,JSON.stringify(seen)); }
+}
+
+/* ---------- search / gold wiring ---------- */
+$("searchBtn").onclick=analyzeOne;
+$("searchSym").addEventListener("keydown",e=>{if(e.key==="Enter")analyzeOne();});
+$("goldBtn").onclick=analyzeGold;
+$("goldSym").addEventListener("keydown",e=>{if(e.key==="Enter")analyzeGold();});
+$("fire").onclick=fireAlert;
+/* tabs */
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); const t=b.dataset.tab;
+  document.querySelectorAll(".pane").forEach(p=>p.hidden=(p.id!=="tab-"+t));
+});
+
+/* ---------- backup / restore ---------- */
+function bak(){const blob=new Blob([JSON.stringify(getLogs(),null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="judas_log_"+new Date().toISOString().slice(0,10)+".json";a.click();setStatus("Log backed up.");}
+function rst(){$("rstFile").click();}
+$("rstFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{const d=JSON.parse(rd.result);if(Array.isArray(d)){setLogs(d);setStatus("Log restored ("+d.length+" rows).");}else setStatus('<span class="err">Not a valid log file.</span>');}catch(x){setStatus('<span class="err">Restore failed: bad JSON.</span>');}};
+  rd.readAsText(f);e.target.value="";});
+
+/* ---------- wire ---------- */
+$("scan").onclick=scan;
+$("stop").onclick=()=>{abort=true;setStatus("Stopping…");};
+$("resolve").onclick=()=>{abort=false;resolveOpen();};
+$("logall").onclick=logAllValid;
+$("bak").onclick=bak; $("rst").onclick=rst;
+$("clr").onclick=()=>{ if(confirm("Clear the entire outcome log? This cannot be undone.")){setLogs([]);setStatus("Log cleared.");} };
+document.querySelectorAll("#showSeg button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#showSeg button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); showMode=b.dataset.show; render();
+});
+CFG_IDS.forEach(k=>{const el=$(k);if(el)el.addEventListener("change",saveCfg);});
+loadCfg(); renderLogs();
+</script>
+</body>
+</html>
