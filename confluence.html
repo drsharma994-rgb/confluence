@@ -2474,6 +2474,75 @@ function onCoinSearch(val){
     if(_st)_st.classList.add('active');
   }
   render();
+  // If search returns no results, try to load the coin directly
+  if(q&&getSorted().length===0){
+    _searchDirectLoad(q.toUpperCase());
+  }
+}
+
+// Direct-load a coin by symbol when search finds nothing in the already-scanned universe
+var _searchLoadPending={};
+async function _searchDirectLoad(query){
+  // Try both QUERYUSD and QUERYUSDT forms
+  var candidates=[query, query.replace(/USD$/,'')+'USD', query.replace(/USDT?$/,'')+'USDT'];
+  // Also try exact match from allSymbols list
+  var exact=(S.allSymbols||[]).filter(function(s){
+    return (s.symbol||'').toUpperCase().includes(query) || (s.base||'').toUpperCase().includes(query);
+  });
+  exact.forEach(function(s){ if(candidates.indexOf(s.symbol)<0) candidates.push(s.symbol); });
+  // Dedupe and limit to 3
+  candidates=[...new Set(candidates)].slice(0,3);
+  for(var i=0;i<candidates.length;i++){
+    var sym=candidates[i];
+    if(_searchLoadPending[sym]) continue;
+    // Skip if already in universe
+    if((S.universe||[]).find(function(a){return a&&a.coin&&a.coin.symbol===sym;})) continue;
+    // Find sym object from allSymbols
+    var symObj=(S.allSymbols||[]).find(function(s){return s.symbol===sym;});
+    if(!symObj) continue;
+    _searchLoadPending[sym]=true;
+    // Show loading state in scanner
+    var el=document.getElementById('content');
+    if(el&&getSorted().length===0){
+      el.innerHTML='<div class="state"><div class="big">Loading '+sym+'…</div>Fetching live data</div>';
+    }
+    try{
+      var tickers=S._lastTickers||[];
+      var tk=tickers.find(function(t){return t.symbol===sym;})||{};
+      var btcPrice=S.btcPrice||0;
+      var [c5,c15,c1h,c4h,c1d,ob,fhist,takerData]=await Promise.all([
+        fetchCandles(sym,'5m',60),
+        fetchCandles(sym,'15m',120),
+        fetchCandles(sym,'1h',200),
+        fetchCandles(sym,'4h',120),
+        fetchCandles(sym,'1d',30),
+        fetchOrderBook(sym),
+        fetchFundingHistory(sym),
+        fetchTakerRatio(sym),
+      ]);
+      var a=analyzeFull(symObj,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,S.fng,takerData);
+      if(a){
+        // Add to universe if not already there
+        if(!(S.universe||[]).find(function(x){return x&&x.coin&&x.coin.symbol===sym;})){
+          S.universe=(S.universe||[]).concat([a]);
+        }
+        render();
+      } else {
+        var el2=document.getElementById('content');
+        if(el2&&getSorted().length===0){
+          el2.innerHTML='<div class="state"><div class="big">'+sym+'</div>No signal — insufficient data or thin market</div>';
+        }
+      }
+    }catch(e){
+      console.warn('[searchDirectLoad]',sym,e&&e.message||String(e));
+      var el3=document.getElementById('content');
+      if(el3&&getSorted().length===0){
+        el3.innerHTML='<div class="state"><div class="big">'+sym+'</div>Failed to load data</div>';
+      }
+    }
+    delete _searchLoadPending[sym];
+    break; // stop after first successful candidate
+  }
 }
 function clearSearch(){
   const inp=document.getElementById('coinSearch');
@@ -3680,6 +3749,7 @@ async function fullRefresh(){
         await loadFng();
         const tickers=await fetchTickers();
         if(!tickers||!tickers.length)throw new Error('No tickers');
+        S._lastTickers=tickers; // store for direct-load search
         setStatus('Analysing '+S.allSymbols.length+' coins…');
         await buildUniverse(tickers);
         detectHits();
