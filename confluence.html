@@ -2509,6 +2509,8 @@ async function _searchDirectLoad(query){
     try{
       var tickers=S._lastTickers||[];
       var tk=tickers.find(function(t){return t.symbol===sym;})||{};
+      // Bypass turnover floor for explicit search — user wants this coin regardless of volume
+      var tkForSearch=Object.assign({},tk,{turnover_usd:9999999,turnover:9999999,volume:9999999});
       var btcPrice=S.btcPrice||0;
       var [c5,c15,c1h,c4h,c1d,ob,fhist,takerData]=await Promise.all([
         fetchCandles(sym,'5m',60),
@@ -2520,7 +2522,7 @@ async function _searchDirectLoad(query){
         fetchFundingHistory(sym),
         fetchTakerRatio(sym),
       ]);
-      var a=analyzeFull(symObj,tk,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,S.fng,takerData);
+      var a=analyzeFull(symObj,tkForSearch,c5,c15,c1h,c4h,c1d,ob,fhist,btcPrice,S.fng,takerData);
       if(a){
         // Add to universe if not already there
         if(!(S.universe||[]).find(function(x){return x&&x.coin&&x.coin.symbol===sym;})){
