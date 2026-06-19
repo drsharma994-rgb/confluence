@@ -415,7 +415,7 @@ Open Risk assumes each stop fills at price. It excludes slippage, gaps, liquidat
 <div class="fld"><label>RSI overbought</label><input id="rsiHi" type="number" value="65" step="1"><span class="hint">adaptive: 65 bear, 70 bull</span></div>
 <div class="fld"><label>RSI oversold</label><input id="rsiLo" type="number" value="35" step="1"><span class="hint">adaptive: 35 bear, 30 bull</span></div>
 <div class="fld"><label>RSI adapt mode</label><select id="rsiAdapt"><option value="trend" selected="">By trend (50 EMA)</option><option value="fixed">Fixed</option></select></div>
-<div class="fld"><label>Funding block (decimal)</label><input id="fund" type="number" value="0.0005" step="0.0001"><span class="hint">±0.05% = 0.0005 — Delta ships decimals (0.01 = 1%)</span></div>
+<div class="fld"><label>Funding block (decimal)</label><input id="fund" type="number" value="0.005" step="0.0005"><span class="hint">±0.5% = 0.005 — Delta ships decimals (0.01=1%). Coins clamped at exactly ±0.005 are auto-excluded.</span></div>
 <div class="fld"><label>Funding mult</label><input id="fmult" type="number" value="1" step="1"><span class="hint">Delta India ships decimals, keep at 1</span></div>
 <div class="fld"><label>ATR × stop (base)</label><input id="atrM" type="number" value="1.5" step="0.25"><span class="hint">× vol factor</span></div>
 <div class="fld"><label>Dynamic ATR</label><select id="atrDyn"><option value="vol" selected="">Auto (vol-scaled)</option><option value="fixed">Fixed</option></select><span class="hint">scales stop distance</span></div>
@@ -607,7 +607,10 @@ async function analyze(sym,tk,k){
   const atr=atrLast(ent,14); const ema50=emaLast(closes,50); const hist=macdHist(closes); const pctB=bbPctB(closes,20,2);
   const j=judas(ent,k.judasMode,k.asH0,k.asH1);
 
-  const rawFund=tkNum(tk,"funding_rate","funding_rate_8h"); const fund=rawFund==null?null:rawFund*k.fmult; const fundClean=fund!=null&&Math.abs(fund)<=k.fund;
+  const rawFund=tkNum(tk,"funding_rate","funding_rate_8h"); const fund=rawFund==null?null:rawFund*k.fmult;
+  // v3.4: exclude Delta-clamped coins (funding_rate exactly ±0.005 = Delta default cap, not real data)
+  const _isClamped=rawFund!=null&&(Math.abs(rawFund-0.005)<0.000001||Math.abs(rawFund+0.005)<0.000001);
+  const fundClean=fund!=null&&!_isClamped&&Math.abs(fund)<=k.fund;
   const mark=tkNum(tk,"mark_price","spot_price","close")??price; const priceDiv=Math.abs(price-mark)/(mark||price); const priceOK=priceDiv<=0.05;
 
   let hi=k.rsiHi,lo=k.rsiLo; if(k.rsiAdapt==="trend"&&ema50!=null){const up=price>ema50; hi=up?70:65; lo=up?30:35;}
@@ -899,9 +902,8 @@ $("showSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{ $("showSeg").
 ["acctSize","riskPct"].forEach(id=>$(id).addEventListener("change",renderHeat));
 CFG_IDS.forEach(k=>{ const el=$(k); if(el) el.addEventListener("change",saveCfg); });
 loadCfg();
-// v3.3 migration: fix stale fund cap (old default 0.05 was wrong — Delta ships decimals, 0.05=5% not 0.05%)
-// If user still has the old value, reset to correct 0.0005
-try{ const _fc=$('fund'); if(_fc&&(+_fc.value===0.05||+_fc.value===0.5||+_fc.value>=0.01)){ _fc.value='0.0005'; saveCfg(); console.log('v3.3: migrated fund cap from '+_fc.value+' to 0.0005'); } }catch(e){}
+// v3.4 migration: raise fund cap to 0.005 (±0.5%) — market-wide elevated funding makes 0.0005 too strict
+try{ const _fc=$('fund'); if(_fc&&(+_fc.value===0.0005||+_fc.value===0.05||+_fc.value===0.5||+_fc.value<0.001)){ _fc.value='0.005'; saveCfg(); console.log('v3.4: migrated fund cap to 0.005'); } }catch(e){}
 renderLog();
 })();
 </script></html>
