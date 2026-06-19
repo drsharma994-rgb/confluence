@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Judas Cascade v3 — Live Command Center</title>
+<title>Judas Cascade v3.3 — Live Command Center</title>
 <meta name="theme-color" content="#0b0e13">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -346,7 +346,7 @@ td .x:hover { color: var(--short); }
 <div class="wrap">
 <div class="hero">
 <span class="mark">JDXv3</span>
-<h1>Judas&nbsp;Cascade</h1>
+<h1>Judas&nbsp;Cascade <span style="font-size:11px;opacity:.6">v3.3</span></h1>
 <span class="sub">Live Command Center</span>
 <span class="badge live">Auto-Scan</span>
 </div>
@@ -563,8 +563,17 @@ function judas(c,mode,asH0,asH1){ if(c.length<12) return {dir:null};
   const post=c.slice(postStart); if(post.length<1) return {dir:null}; const last=c[c.length-1].c;
   const sweptDown=post.some(k=>k.l<lo), reclaimUp=post.some((k,idx)=>k.l<lo&&post.slice(idx).some(j=>j.c>lo));
   const sweptUp=post.some(k=>k.h>hi),   reclaimDn=post.some((k,idx)=>k.h>hi&&post.slice(idx).some(j=>j.c<hi));
-  let dir=null; if(sweptDown&&reclaimUp&&last>lo) dir="long"; else if(sweptUp&&reclaimDn&&last<hi) dir="short";
-  return {dir,rangeHi:hi,rangeLo:lo}; }
+  // v3.3 — Post-sweep rejection gate: require current price to be BACK INSIDE the range
+  // by at least 0.3% below arHigh (short) or 0.3% above arLo (long).
+  // Prevents entries during live sweeps where price is still near/above the range boundary.
+  // e.g. ZEC: arHigh=450, sweepHigh=454, last=451.7 — old code: dir=short (last<454). New: 451.7 < 450*0.997=448.65? No → dir=null, sweepPending=true
+  const rejectedHi = sweptUp   && reclaimDn && last < hi * 0.997;
+  const rejectedLo = sweptDown && reclaimUp && last > lo * 1.003;
+  // sweepPending: sweep happened but rejection not yet confirmed — show warning, block VALID
+  const sweepPendingShort = sweptUp   && !rejectedHi;
+  const sweepPendingLong  = sweptDown && !rejectedLo;
+  let dir=null; if(rejectedLo) dir="long"; else if(rejectedHi) dir="short";
+  return {dir,rangeHi:hi,rangeLo:lo,sweepPendingShort,sweepPendingLong}; }
 
 /* ---------- context ---------- */
 function lastTwoPivots(arr,kind){ const piv=[]; for(let i=2;i<arr.length-2;i++){
@@ -646,7 +655,7 @@ async function analyze(sym,tk,k){
 
   return {sym,dir:cascade,valid:!!valid,watch:!!watch,err:null,score,
     tf:{d4,d1,d15,d5},rsi,fund,fundClean,priceOK,priceDiv,
-    judas:j.dir,judasOK,div,exhausted,stretched,stretchPct,pctB,phase,
+    judas:j.dir,judasOK,j,div,exhausted,stretched,stretchPct,pctB,phase,
     aboveEma50:ema50!=null?price>ema50:null, atrPct:atr!=null?atr/entry:null, spark:closes.slice(-40),
     entry,stop,target,rr, turnover:tkNum(tk,"turnover_usd","turnover","mark_volume")||0 };
 }
@@ -686,7 +695,10 @@ function card(r,i){ if(r.err) return ""; const d=r.dir;
     return `<span style="color:var(--${v==='long'?'long':v==='short'?'short':'dim'})">${t}</span>`;}).join(" ");
   const ctx=[];
   ctx.push(chip(`Q ${r.score}`, scoreCls(r.score)));
-  if(r.judasOK) ctx.push(chip("JUDAS ✓","acc")); else ctx.push(chip("no sweep",""));
+  if(r.judasOK) ctx.push(chip("JUDAS ✓","acc"));
+  else if(r.judas==='short'&&r.j?.sweepPendingShort) ctx.push(chip("⏳ SWEEP↑ PENDING","mark"));
+  else if(r.judas==='long'&&r.j?.sweepPendingLong)   ctx.push(chip("⏳ SWEEP↓ PENDING","mark"));
+  else ctx.push(chip("no sweep",""));
   ctx.push(chip(`FUND ${r.fund!=null?(r.fund>=0?'+':'')+r.fund.toFixed(3):'—'}`, r.fundClean?"acc":"dist"));
   ctx.push(chip(`RSI ${r.rsi!=null?r.rsi.toFixed(0):'—'}`,""));
   if(r.div) ctx.push(chip(`MACD div ${r.div}`, r.div===d?"acc":"dist"));
