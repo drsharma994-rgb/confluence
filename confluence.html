@@ -7218,6 +7218,187 @@ function closeCoinDetail(){
   document.body.style.overflow='';
 }
 
+
+function _strict8EmaLast(closes, p) {
+  if (!closes || closes.length < p) return null;
+  var k = 2 / (p + 1), e = 0;
+  for (var i = 0; i < p; i++) e += closes[i];
+  e /= p;
+  for (var j = p; j < closes.length; j++) e = closes[j] * k + e * (1 - k);
+  return e;
+}
+function _strict8Rsi(closes, p) {
+  p = p || 14;
+  if (!closes || closes.length < p + 1) return 50;
+  var g = 0, l = 0, d;
+  for (var i = 1; i <= p; i++) { d = closes[i] - closes[i-1]; if (d > 0) g += d; else l -= d; }
+  g /= p; l /= p;
+  for (var j = p + 1; j < closes.length; j++) {
+    d = closes[j] - closes[j-1];
+    g = (g * (p-1) + (d > 0 ? d : 0)) / p;
+    l = (l * (p-1) + (d < 0 ? -d : 0)) / p;
+  }
+  return 100 - 100 / (1 + g / (l || 1e-9));
+}
+function _strict8Atr(candles, p) {
+  p = p || 14;
+  if (!candles || candles.length < p + 1) return null;
+  var trs = [];
+  for (var i = 1; i < candles.length; i++) {
+    trs.push(Math.max(
+      candles[i].h - candles[i].l,
+      Math.abs(candles[i].h - candles[i-1].c),
+      Math.abs(candles[i].l - candles[i-1].c)
+    ));
+  }
+  var a = 0; for (var k = 0; k < p; k++) a += trs[k]; a /= p;
+  for (var m = p; m < trs.length; m++) a = (a * (p-1) + trs[m]) / p;
+  return a;
+}
+function _strict8Cusum(closes) {
+  if (!closes || closes.length < 25) return 'neutral';
+  var ret = [];
+  for (var i = 1; i < closes.length; i++) ret.push(Math.log(closes[i] / closes[i-1]));
+  var W = 20, k = 0.5, h = 4, sp = 0, sm = 0, bull = false, bear = false;
+  for (var i = W; i < ret.length; i++) {
+    var win = ret.slice(i-W, i);
+    var mu = win.reduce(function(a,b){return a+b;},0) / W;
+    var sig = Math.sqrt(win.reduce(function(a,b){return a+(b-mu)*(b-mu);},0) / W) || 1e-9;
+    var z = (ret[i] - mu) / sig;
+    sp = Math.max(0, sp + z - k);
+    sm = Math.max(0, sm - z - k);
+    if (sp > h) { bull = true; sp = 0; }
+    if (sm > h) { bear = true; sm = 0; }
+  }
+  return bear ? 'bearish' : bull ? 'bullish' : 'neutral';
+}
+function _strict8Judas(candles15, direction) {
+  if (!candles15 || candles15.length < 12) return { ok: false, note: 'no data' };
+  var blk = [], best = null, prev = null;
+  for (var i = 0; i < candles15.length; i++) {
+    var hr = new Date(candles15[i].t * 1000).getUTCHours();
+    if (hr >= 0 && hr < 6) {
+      blk.push(i);
+    } else if (blk.length) {
+      prev = best; best = blk.slice(); blk = [];
+    }
+  }
+  if (blk.length >= 4) best = blk;
+  else if (!best && blk.length) best = blk;
+  if ((!best || best.length < 2) && prev && prev.length >= 2) best = prev;
+  if (!best || best.length < 2) return { ok: false, note: 'Asian range forming' };
+  var aHi = Math.max.apply(null, best.map(function(i){ return candles15[i].h; }));
+  var aLo = Math.min.apply(null, best.map(function(i){ return candles15[i].l; }));
+  var post = candles15.slice(best[best.length-1] + 1);
+  if (!post.length) return { ok: false, note: 'no post-Asian bars' };
+  var last = post[post.length-1].c;
+  if (direction === 'long') {
+    var swept = post.some(function(b){ return b.l < aLo; });
+    var reclaimed = post.some(function(b, idx){ return b.l < aLo && post.slice(idx).some(function(j){ return j.c > aLo; }); });
+    var ok = swept && reclaimed && last > aLo;
+    return { ok: ok, note: ok ? 'swept+reclaimed' : swept ? 'swept/no reclaim' : 'not swept yet', aHi: aHi, aLo: aLo };
+  } else {
+    var swept = post.some(function(b){ return b.h > aHi; });
+    var reclaimed = post.some(function(b, idx){ return b.h > aHi && post.slice(idx).some(function(j){ return j.c < aHi; }); });
+    var ok = swept && reclaimed && last < aHi;
+    return { ok: ok, note: ok ? 'swept+rejected' : swept ? 'swept/no reject' : 'not swept yet', aHi: aHi, aLo: aLo };
+  }
+}
+
+function _computeStrict8Gate(a) {
+  if (!a || !a.coin) return null;
+  var dir = a.dir || 'long';
+  var price = a.price || 0;
+  if (!price) return null;
+  var c4   = a._c4h  || a.candles4h  || [];
+  var c1   = a._c1h  || a.candles1h  || a.candles || [];
+  var c15  = a._c15m || a.candles15m || [];
+  var cl1  = c1.map(function(b){ return b.c||b.close||0; });
+  var cl4  = c4.map(function(b){ return b.c||b.close||0; });
+  var cl15 = c15.map(function(b){ return b.c||b.close||0; });
+  var rsi1h  = (cl1.length > 15)  ? _strict8Rsi(cl1)  : (a.rsiVal  || 50);
+  var rsi15m = (cl15.length > 15) ? _strict8Rsi(cl15) : (a.rsi15m  || a.rsi15 || 50);
+  var rsi4h  = (cl4.length > 15)  ? _strict8Rsi(cl4)  : (a.rsi4hVal || 50);
+  var e20  = (cl1.length >= 20) ? _strict8EmaLast(cl1,20) : null;
+  var e50  = (cl1.length >= 50) ? _strict8EmaLast(cl1,50) : null;
+  var d4f  = (cl4.length >= 9)  ? _strict8EmaLast(cl4,9)  : null;
+  var d4s  = (cl4.length >= 21) ? _strict8EmaLast(cl4,21) : null;
+  var d1f  = (cl1.length >= 9)  ? _strict8EmaLast(cl1,9)  : null;
+  var d1s  = (cl1.length >= 21) ? _strict8EmaLast(cl1,21) : null;
+  var d15f = (cl15.length >= 9) ? _strict8EmaLast(cl15,9) : null;
+  var d15s = (cl15.length >= 21)? _strict8EmaLast(cl15,21): null;
+  if (!e20  && a.ema20)  e20  = a.ema20;
+  if (!e50  && a.ema50)  e50  = a.ema50;
+  var atrv  = (c1.length > 15)  ? _strict8Atr(c1)  : (a.atr || price * 0.01);
+  var atr15 = (c15.length > 15) ? _strict8Atr(c15) : (price * 0.005);
+  var csig = (cl1.length >= 25) ? _strict8Cusum(cl1) : (a.cusum && a.cusum.signal) || 'neutral';
+  var judas = _strict8Judas(c15.length ? c15 : [], dir);
+  if (!c15.length && a.v1310res && a.v1310res.asianR) {
+    var ar = a.v1310res.asianR;
+    judas.ok = ar.judasClear && ar.judasBias === dir;
+    judas.note = judas.ok ? 'swept+' + (dir==='long'?'reclaimed':'rejected') : (ar.sweepPending ? 'sweep pending' : 'not swept yet');
+  }
+  var isLong = dir === 'long';
+  var tvote = (e20 != null && e50 != null) ? (e20 > e50 ? 'BULL' : 'BEAR') : 'N';
+  var mvote = (rsi1h > 55 && rsi1h <= 68) ? 'BULL' : (rsi1h >= 32 && rsi1h < 45) ? 'BEAR' : 'N';
+  var vvote = 'N';
+  if (atrv && atrv/price*100 > 0.5) { vvote = (price > (e20 || price)) ? 'BULL' : 'BEAR'; }
+  var highs1h = c1.map(function(b){ return b.h || 0; });
+  var lows1h  = c1.map(function(b){ return b.l || 0; });
+  var h20 = highs1h.length >= 40 ? Math.max.apply(null, highs1h.slice(-40,-20)) : (a.sw && a.sw.high) || price;
+  var l20 = lows1h.length  >= 40 ? Math.min.apply(null, lows1h.slice(-40,-20))  : (a.sw && a.sw.low)  || price;
+  var svote = price > h20 ? 'BULL' : price < l20 ? 'BEAR' : 'N';
+  var side = isLong ? 'BULL' : 'BEAR';
+  var fam = [tvote,mvote,vvote,svote].filter(function(v){ return v === side; }).length;
+  var mtf;
+  if (isLong) {
+    mtf = [d4f != null && d4s != null && d4f > d4s, d1f != null && d1s != null && d1f > d1s, d15f != null && d15s != null && d15f > d15s].filter(Boolean).length;
+    if (d4f == null && a.alignResult) mtf = a.alignResult.score >= 3 ? 3 : a.alignResult.score;
+  } else {
+    mtf = [d4f != null && d4s != null && d4f < d4s, d1f != null && d1s != null && d1f < d1s, d15f != null && d15s != null && d15f < d15s].filter(Boolean).length;
+    if (d4f == null && a.alignResult) mtf = a.alignResult.score >= 3 ? 3 : a.alignResult.score;
+  }
+  var h15 = c15.map(function(b){ return b.h || 0; });
+  var l15 = c15.map(function(b){ return b.l || 0; });
+  var stop, targetP;
+  if (isLong) {
+    var structural = l15.length >= 10 ? Math.min.apply(null, l15.slice(-10)) - 0.1*atr15 : price - atr15*1.5;
+    stop = Math.max(structural, price - atr15*1.5);
+    targetP = price + 2*(price - stop);
+  } else {
+    var structural = h15.length >= 10 ? Math.max.apply(null, h15.slice(-10)) + 0.1*atr15 : price + atr15*1.5;
+    stop = Math.min(structural, price + atr15*1.5);
+    targetP = price - 2*(stop - price);
+  }
+  if (a.plan && a.plan.stop) stop = a.plan.stop;
+  if (a.plan && a.plan.t1)   targetP = a.plan.t1;
+  var slPct = Math.abs(price - stop) / price * 100;
+  var tpPct = Math.abs(price - targetP) / price * 100;
+  var rr = slPct > 0 ? Math.round(tpPct / slPct * 10) / 10 : 0;
+  var frPct = (a.funding && a.funding.current != null) ? a.funding.current * 100 : 0;
+  if (Math.abs(frPct) < 0.5 && a.funding && a.funding.current != null) {
+    frPct = a.funding.current * 10000;
+  }
+  var rsiOk = rsi1h >= 33 && rsi1h <= 65 && rsi15m >= 33 && rsi15m <= 65;
+  var cusumOk = isLong ? csig === 'bullish' : csig === 'bearish';
+  var g1 = fam === 4;
+  var g2 = mtf === 3;
+  var g3 = rsiOk;
+  var g4 = Math.abs(frPct) > 5.0;
+  var g5 = cusumOk;
+  var g6 = judas.ok;
+  var g7 = rr >= 2.0;
+  var g8 = slPct >= 0.5;
+  return {
+    gates: [g1,g2,g3,g4,g5,g6,g7,g8],
+    fam: fam, mtf: mtf, rr: rr, slPct: Math.round(slPct*100)/100,
+    rsi1h: Math.round(rsi1h*10)/10, rsi15m: Math.round(rsi15m*10)/10,
+    cusum: csig, judasOk: judas.ok, judasNote: judas.note,
+    frPct: Math.round(frPct*100)/100,
+    stop: Math.round(stop*1e6)/1e6, target: Math.round(targetP*1e6)/1e6
+  };
+}
+
 function renderCoinDetail(a){
   const sym=a.coin.symbol;
   const base=sym.replace('USD','').replace('USDT','');
@@ -7604,6 +7785,41 @@ function renderCoinDetail(a){
       v13El.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:6px 0">Run a scan to populate v13.6 analysis</div>';
     }
   }
+
+  /* ─ Strict 8-Gate Panel ─ */
+  (function(){
+    var el = document.getElementById('cdp-strict8');
+    if (!el) return;
+    var g = _computeStrict8Gate(a);
+    if (!g) { el.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:6px 0">Insufficient data for 8-gate check</div>'; return; }
+    var gateNames = ['G1 Family 4/4','G2 MTF 3/3','G3 RSI 33-65','G4 Funding >5%','G5 CUSUM','G6 Judas Sweep','G7 R:R >= 2.0','G8 SL >= 0.5%'];
+    var gates = g.gates;
+    var score = gates.filter(Boolean).length;
+    var verdict, vCol, vBg;
+    if (score === 8)      { verdict='OK 8/8 - FULL SIZE ENTRY'; vCol='#22c55e'; vBg='#22c55e15'; }
+    else if (score === 7) { verdict='7/8 - SMALLER SIZE ONLY'; vCol='#f59e0b'; vBg='#f59e0b15'; }
+    else                  { verdict='SKIP '+score+'/8'; vCol='#ef4444'; vBg='#ef444415'; }
+    var rows = gateNames.map(function(name, i) {
+      var ok = gates[i];
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)">'
+        + '<span style="width:16px;height:16px;border-radius:4px;background:'+(ok?'#22c55e22':'#ef444422')+';border:1px solid '+(ok?'#22c55e':'#ef4444')+';display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:'+(ok?'#22c55e':'#ef4444')+';flex-shrink:0">'+(ok?'Y':'N')+'</span>'
+        + '<span style="font-family:var(--mono);font-size:10.5px;color:'+(ok?'var(--ink)':'var(--muted)')+'">'+name+'</span>'
+        + '</div>';
+    }).join('');
+    el.innerHTML = '<div style="background:var(--card);border:1px solid '+(score>=7?vCol+'55':'var(--border)')+';border-radius:12px;padding:12px 13px">'
+      + '<div style="background:'+vBg+';border:1px solid '+vCol+'55;border-radius:8px;padding:7px 10px;margin-bottom:10px;font-family:var(--mono);font-size:11px;font-weight:800;color:'+vCol+'">'
+      +   '<span>'+verdict+'</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+      +   '<div style="background:var(--panel);border-radius:8px;padding:6px 12px;text-align:center"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Score</div><div style="font-family:var(--mono);font-size:18px;font-weight:900;color:'+vCol+'">'+score+'<span style="font-size:11px;color:var(--muted)">/8</span></div></div>'
+      +   '<div style="background:var(--panel);border-radius:8px;padding:6px 12px;text-align:center"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Family</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+(g.fam===4?'#22c55e':g.fam>=3?'#f59e0b':'#ef4444')+'">'+g.fam+'<span style="font-size:10px;color:var(--muted)">/4</span></div></div>'
+      +   '<div style="background:var(--panel);border-radius:8px;padding:6px 12px;text-align:center"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">MTF</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+(g.mtf===3?'#22c55e':g.mtf===2?'#f59e0b':'#ef4444')+'">'+g.mtf+'<span style="font-size:10px;color:var(--muted)">/3</span></div></div>'
+      +   '<div style="background:var(--panel);border-radius:8px;padding:6px 12px;text-align:center"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">R:R</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+(g.rr>=2?'#22c55e':g.rr>=1.5?'#f59e0b':'#ef4444')+'">'+g.rr.toFixed(1)+'</div></div>'
+      + '</div>'
+      + rows
+      + '<div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted)">Judas: '+(g.judasNote||'-')+'  CUSUM: '+g.cusum.toUpperCase()+'  Funding: '+(g.frPct>=0?'+':'')+g.frPct.toFixed(2)+'%</div>'
+      + '</div>';
+  })();
 }
 
 function indBox(label,val,sub){
@@ -22222,6 +22438,12 @@ function v1311_scoreDelta(v1311res, dir) {
     <div class="cdp-section">
       <div class="cdp-section-title">v13.6 Setup Formation</div>
       <div id="cdp-v13-card"></div>
+    </div>
+    <div class="cdp-div"></div>
+    <!-- Strict 8-Gate Score -->
+    <div class="cdp-section">
+      <div class="cdp-section-title">Strict 8-Gate Score</div>
+      <div id="cdp-strict8"></div>
     </div>
     <div class="cdp-div"></div>
     <!-- Checks / Conditions -->
